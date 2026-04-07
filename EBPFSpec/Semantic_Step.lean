@@ -58,27 +58,33 @@ inductive step (code : List opCode) : PC → MachineState → MachineState → P
       code.get? pc = some (opCode.ldh_X_32 dst src index) →
       s.[index + s.(src)] = some v →
       step code (pc+1) s (s.[dst↦ v ])
-/-
-  | rule_ldh_K_32 :
-      ∀ {s : MachineState} { imm : ℕ } {index : ℕ} ,
-      code.get? pc = some (opCode.ldh_K_32 imm index) →
-      step code (pc+1) s (s.[dst↦ imm ])
--/
+
+  | rule_ldh_X_32_none :
+      ∀ {s : MachineState} {dst : Reg} {index : ℕ},
+      code.get? pc = some (opCode.ldh_X_32 dst src index) →
+      s.[index + s.(src)] = none →
+      step code (pc+1) s s
   | rule_ldxh_X_32 :
       ∀ {s : MachineState} {dst : Reg} {index : ℕ} {v},
       code.get? pc = some (opCode.ldxh_X_32 dst index) →
       s.[index] = some v →
       step code (pc+1) s (s.[dst↦ v])
-/-
-  | rule_ldxh_K_32 :
-      ∀ {s : MachineState} {imm : ℕ} {index : ℕ} ,
-      code.get? pc = some (opCode.ldxh_K_32 imm index) →
-      step code (pc+1) s (s.[dst↦ imm])
--/
+
+  | rule_ldxh_X_32_none :
+      ∀ {s : MachineState} {dst : Reg} {index : ℕ},
+      code.get? pc = some (opCode.ldxh_X_32 dst index) →
+      s.[index] = none →
+      step code (pc+1) s s
+
   | rule_sth_X_32 :
       ∀ {s : MachineState} {src : Reg} {index : ℕ},
       code.get? pc = some (opCode.sth_X_32 src index) →
       step code (pc+1) s (s.[index]:= s.(src))
+
+  | rule_sth_K_32 :
+      ∀ {s : MachineState} {imm index : ℕ},
+      code.get? pc = some (opCode.sth_K_32 imm index) →
+      step code (pc+1) s (s.[index]:= imm)
 
   | jgt_X_true :
       ∀ {s : MachineState} {dst src : Reg} {offset : ℕ},
@@ -175,3 +181,14 @@ inductive step (code : List opCode) : PC → MachineState → MachineState → P
       code.get? pc = some (opCode.jset_K_32 dst imm offset) →
       (Nat.land (s.(dst)) imm ) = 0 →
       step code (pc+1) s s
+
+
+
+inductive run (code : Code) : PC → MachineState → MachineState → Prop where
+  | halt (pc : PC) (s : MachineState) :
+      code.get? pc = some .exit →
+      run code pc s s
+  | seq (pc next_pc : PC) (s next_s s_final : MachineState) :
+      step code next_pc s next_s →
+      run code next_pc next_s s_final →
+      run code pc s s_final

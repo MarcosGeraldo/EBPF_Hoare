@@ -96,6 +96,7 @@ def getRegs (s : MachineState) : RegsState :=
 -------------------- Macros -----------------------------
 ------------------------------------------------------------
 
+#check readStackNat
 -- Macro para escrita e leitura da pilha
 macro s:term ".[" index:term "]:=" val:term : term =>
   `(writeStack $s $index $val)

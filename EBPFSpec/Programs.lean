@@ -1,37 +1,5 @@
 import EBPFSpec.Ver_Cond_Gen_Sound
 
--- set_option maxHeartbeats 500000
-
-/-
-Memory increment: a four-instruction program
-
-incrMem loads a value v from address r0, adds 1,
-and stores v + 1 to address r1.
-
-```
-  LOAD  r2, r0     --  r2 := mem[r0]
-  MOVI  r3, 1      --  r3 := 1
-  ADD   r3, r2     --  r2 := r2 + r3  (= v + 1)
-  STORE r2, r1     --  mem[r1] := r2
-```
-
-Precondition: mem[r0] holds some value v;
-                  mem[r1] already exists.
-Postcondition: mem[r1] holds v + 1.
--/
-/-
-r2 := heap[0]
-r3 := 1
-r2 := r2 + r3
-heap[0] := r2
-
-def incrMem : Code :=
-  [ Instr.LOAD  (Reg.Name 2) (Reg.Name 0)
-  , Instr.MOVI  (Reg.Name 3) 1
-  , Instr.ADD   (Reg.Name 3) (Reg.Name 2)
-  , Instr.STORE (Reg.Name 2) (Reg.Name 1)
-  ]
--/
 
 def incrMem : Code :=
   [ .ldxh_X_32 (Reg.r2) 0
@@ -328,6 +296,10 @@ def prog_subnet : Code :=
   ,.exit
   ]
 
+-- {1,2,3,4,5,6,7,8}
+-- Ldxh[0] == 1,2,3,4
+-- Ldxw[0] == 1,2,3,4,5,6,7,8
+
 theorem prog_subnet_correct_VCG :
     ⦃ fun s =>
     s.[12] = some 0x0008
@@ -433,3 +405,13 @@ theorem prog_only_IPv4_TCP_SSH_correct_VCG :
       .
         simp [List.get?,vcg] at h
     . simp
+
+
+/-
+
+Mostrar semantica Ebpf
+Provar que a run(antiga),
+  executa de acordo com a small step definida
+  Se interp : fuel S p = some s₁ → run fuel S p s₁
+
+-/
