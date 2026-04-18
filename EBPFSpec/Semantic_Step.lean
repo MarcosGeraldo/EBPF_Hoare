@@ -11,174 +11,175 @@ inductive step (code : List opCode) : PC → MachineState → MachineState → P
       code.get? pc = .some (opCode.exit) →
       step code pc s s
 
-  | rule_mov_X_32 : ∀
+  | rule_mov_X : ∀
       (pc : PC)
       {s : MachineState} {dst src : Reg},
-      code.get? pc = some (opCode.mov_X_32 dst src) →
+      code.get? pc = some (opCode.mov_X dst src) →
       step code (pc+1) s (s.[dst↦ s.(src)])
 
-  | rule_mov_K_32 : ∀
+  | rule_mov_K : ∀
       (pc : PC)
       {s : MachineState} {dst : Reg} {imm : ℕ},
-      code.get? pc = some (opCode.mov_K_32 dst imm) →
+      code.get? pc = some (opCode.mov_K dst imm) →
       step code (pc+1) s (s.[dst↦ imm])
 
-  | rule_add_X_32 : ∀
+  | rule_add_X : ∀
       (pc : PC)
       {s : MachineState}
       {dst src : Reg},
-      code.get? pc = .some (opCode.add_X_32 dst src) →
+      code.get? pc = .some (opCode.add_X dst src) →
       step code (pc+1) s (s.[dst↦ s.(dst) + s.(src) ])
 
-  | rule_add_K_32 : ∀
+  | rule_add_K : ∀
       (pc : PC)
       {s : MachineState}
       {imm : ℕ }
       {dst : Reg},
-      code.get? pc = .some (opCode.add_K_32 dst imm) →
+      code.get? pc = .some (opCode.add_K dst imm) →
       step code (pc+1) s (s.[dst↦ s.(dst) + imm ])
 
-  | rule_and_X_32 : ∀
+  | rule_and_X : ∀
       (pc : PC)
       {s : MachineState}
       {dst src : Reg},
-      code.get? pc = .some (opCode.and_X_32 dst src) →
+      code.get? pc = .some (opCode.and_X dst src) →
       step code (pc+1) s (s.[dst↦ s.(dst) &&& s.(src) ])
 
-  | rule_and_K_32 : ∀
+  | rule_and_K : ∀
       (pc : PC)
       {s : MachineState}
       {imm : ℕ }
       {dst : Reg},
-      code.get? pc = .some (opCode.and_K_32 dst imm) →
+      code.get? pc = .some (opCode.and_K dst imm) →
       step code (pc+1) s (s.[dst↦ s.(dst) &&& imm ])
 
-  | rule_ldh_X_32 :
+  | rule_ldh_X :
       ∀ {s : MachineState} {dst : Reg} {index : ℕ} {v},
-      code.get? pc = some (opCode.ldh_X_32 dst src index) →
+      code.get? pc = some (opCode.ldh_X dst src index) →
       s.[index + s.(src)] = some v →
       step code (pc+1) s (s.[dst↦ v ])
 
-  | rule_ldh_X_32_none :
+  | rule_ldh_X_none :
       ∀ {s : MachineState} {dst : Reg} {index : ℕ},
-      code.get? pc = some (opCode.ldh_X_32 dst src index) →
+      code.get? pc = some (opCode.ldh_X dst src index) →
       s.[index + s.(src)] = none →
       step code (pc+1) s s
-  | rule_ldxh_X_32 :
+/-
+  | rule_ldxh_X :
       ∀ {s : MachineState} {dst : Reg} {index : ℕ} {v},
-      code.get? pc = some (opCode.ldxh_X_32 dst index) →
+      code.get? pc = some (opCode.ldxh_X dst index) →
       s.[index] = some v →
       step code (pc+1) s (s.[dst↦ v])
 
-  | rule_ldxh_X_32_none :
+  | rule_ldxh_X_none :
       ∀ {s : MachineState} {dst : Reg} {index : ℕ},
-      code.get? pc = some (opCode.ldxh_X_32 dst index) →
+      code.get? pc = some (opCode.ldxh_X dst index) →
       s.[index] = none →
       step code (pc+1) s s
-
-  | rule_sth_X_32 :
+-/
+  | rule_sth_X :
       ∀ {s : MachineState} {src : Reg} {index : ℕ},
-      code.get? pc = some (opCode.sth_X_32 src index) →
+      code.get? pc = some (opCode.sth_X src index) →
       step code (pc+1) s (s.[index]:= s.(src))
 
-  | rule_sth_K_32 :
+  | rule_sth_K :
       ∀ {s : MachineState} {imm index : ℕ},
-      code.get? pc = some (opCode.sth_K_32 imm index) →
+      code.get? pc = some (opCode.sth_K imm index) →
       step code (pc+1) s (s.[index]:= imm)
 
   | jgt_X_true :
       ∀ {s : MachineState} {dst src : Reg} {offset : ℕ},
-      code.get? pc = some (opCode.jgt_X_32 dst src offset) →
+      code.get? pc = some (opCode.jgt_X dst src offset) →
       s.(dst) > s.(src) →
       step code (pc+offset+1) s s
 
   | jgt_X_false :
       ∀ {s : MachineState} {dst src : Reg} {offset : ℕ},
-      code.get? pc = some (opCode.jgt_X_32 dst src offset) →
+      code.get? pc = some (opCode.jgt_X dst src offset) →
       s.(dst) ≤ s.(src) →
       step code (pc+1) s s
 
   | jgt_K_true :
       ∀ {s : MachineState} { imm : ℕ } {dst : Reg} {offset : ℕ},
-      code.get? pc = some (opCode.jgt_K_32 dst imm offset) →
+      code.get? pc = some (opCode.jgt_K dst imm offset) →
       s.(dst) > imm →
       step code (pc+offset+1) s s
 
   | jgt_K_false :
       ∀ {s : MachineState} { imm : ℕ } {dst : Reg} {offset : ℕ},
-      code.get? pc = some (opCode.jgt_K_32 dst imm offset) →
+      code.get? pc = some (opCode.jgt_K dst imm offset) →
       s.(dst) ≤ imm →
       step code (pc+1) s s
 
   | jne_X_true :
       ∀ {s : MachineState} {dst src : Reg} {offset : ℕ},
-      code.get? pc = some (opCode.jne_X_32 dst src offset) →
+      code.get? pc = some (opCode.jne_X dst src offset) →
       s.(dst) ≠ s.(src) →
       step code (pc+offset+1) s s
 
   | jne_X_false :
       ∀ {s : MachineState} {dst src : Reg} {offset : ℕ},
-      code.get? pc = some (opCode.jne_X_32 dst src offset) →
+      code.get? pc = some (opCode.jne_X dst src offset) →
       s.(dst) = s.(src) →
       step code (pc+1) s s
 
   | jne_K_true :
       ∀ {s : MachineState} {dst : Reg} {imm offset : ℕ},
-      code.get? pc = some (opCode.jne_K_32 dst imm offset) →
+      code.get? pc = some (opCode.jne_K dst imm offset) →
       s.(dst) ≠ imm →
       step code (pc+offset+1) s s
 
   | jne_K_false :
       ∀ {s : MachineState} {dst : Reg} {imm offset : ℕ},
-      code.get? pc = some (opCode.jne_K_32 dst imm offset) →
+      code.get? pc = some (opCode.jne_K dst imm offset) →
       s.(dst) = imm →
       step code (pc+1) s s
 
   | jeq_X_true :
       ∀ {s : MachineState} {dst src : Reg} {offset : ℕ},
-      code.get? pc = some (opCode.jeq_X_32 dst src offset) →
+      code.get? pc = some (opCode.jeq_X dst src offset) →
       s.(dst) = s.(src) →
       step code (pc+offset+1) s s
 
   | jeq_X_false :
       ∀ {s : MachineState} {dst src : Reg} {offset : ℕ},
-      code.get? pc = some (opCode.jeq_X_32 dst src offset) →
+      code.get? pc = some (opCode.jeq_X dst src offset) →
       s.(dst) ≠ s.(src) →
       step code (pc+1) s s
 
   | jeq_K_true :
       ∀ {s : MachineState} {dst : Reg} {imm offset : ℕ},
-      code.get? pc = some (opCode.jeq_K_32 dst imm offset) →
+      code.get? pc = some (opCode.jeq_K dst imm offset) →
       s.(dst) = imm →
       step code (pc+offset+1) s s
 
   | jeq_K_false :
       ∀ {s : MachineState} {dst : Reg} {imm offset : ℕ},
-      code.get? pc = some (opCode.jeq_K_32 dst imm offset) →
+      code.get? pc = some (opCode.jeq_K dst imm offset) →
       s.(dst) ≠ imm →
       step code (pc+1) s s
 
   | jset_X_true :
       ∀ {s : MachineState} {dst src : Reg} {offset : ℕ},
-      code.get? pc = some (opCode.jset_X_32 dst src offset) →
+      code.get? pc = some (opCode.jset_X dst src offset) →
       (Nat.land (s.(dst)) (s.(src))) ≠ 0 →
       step code (pc+offset+1) s s
 
   | jset_X_false :
       ∀ {s : MachineState} {dst src : Reg} {offset : ℕ},
-      code.get? pc = some (opCode.jset_X_32 dst src offset) →
+      code.get? pc = some (opCode.jset_X dst src offset) →
       (Nat.land (s.(dst)) (s.(src))) = 0 →
       step code (pc+1) s s
 
   | jset_K_true :
       ∀ {s : MachineState} {dst : Reg} {imm offset : ℕ},
-      code.get? pc = some (opCode.jset_K_32 dst imm offset) →
+      code.get? pc = some (opCode.jset_K dst imm offset) →
       (Nat.land (s.(dst)) imm ) ≠ 0 →
       step code (pc+offset+1) s s
 
   | jset_K_false :
       ∀ {s : MachineState} {dst : Reg} {imm offset : ℕ},
-      code.get? pc = some (opCode.jset_K_32 dst imm offset) →
+      code.get? pc = some (opCode.jset_K dst imm offset) →
       (Nat.land (s.(dst)) imm ) = 0 →
       step code (pc+1) s s
 

@@ -5,24 +5,24 @@ import EBPFSpec.Sep_Logic
 
 def wp (i : opCode) (Q : Assert) : Assert :=
   match i with
-  | .mov_K_32 dst imm  => fun s => Q (s.[dst ↦ imm] )
-  | .mov_X_32 dst src  => fun s => Q (s.[dst ↦ s.(src)] )
-  | .add_K_32 dst imm => fun s => Q ( s.[dst ↦ s.(dst) + imm] )
-  | .add_X_32 dst src => fun s => Q ( s.[dst ↦ s.(dst) + s.(src)] )
-  | .and_K_32 dst imm => fun s => Q ( s.[dst ↦ s.(dst) &&& imm] )
-  | .and_X_32 dst src => fun s => Q ( s.[dst ↦ s.(dst) &&& s.(src)] )
-  | .jgt_X_32 _ _ _ => Q
-  | .jgt_K_32 _ _ _ => Q
-  | .jne_X_32 _ _ _ => Q
-  | .jne_K_32 _ _ _ => Q
-  | .jeq_X_32 _ _ _ => Q
-  | .jeq_K_32 _ _ _ => Q
-  | .jset_K_32 _ _ _ => Q
-  | .jset_X_32 _ _ _ => Q
-  | .ldh_X_32 dst src index => fun s => ∃ val,s.[index + s.(src)] = some val ∧  Q ( s.[dst ↦ val] )
-  | .ldxh_X_32 dst index => fun s => ∃ val,s.[index] = some val ∧  Q ( s.[dst ↦ val] )
-  | .sth_X_32 src index => fun s => Q ( s.[index]:= s.(src) )
-  | .sth_K_32 imm index => fun s => Q ( s.[index]:= imm )
+  | .mov_K dst imm  => fun s => Q (s.[dst ↦ imm] )
+  | .mov_X dst src  => fun s => Q (s.[dst ↦ s.(src)] )
+  | .add_K dst imm => fun s => Q ( s.[dst ↦ s.(dst) + imm] )
+  | .add_X dst src => fun s => Q ( s.[dst ↦ s.(dst) + s.(src)] )
+  | .and_K dst imm => fun s => Q ( s.[dst ↦ s.(dst) &&& imm] )
+  | .and_X dst src => fun s => Q ( s.[dst ↦ s.(dst) &&& s.(src)] )
+  | .jgt_X _ _ _ => Q
+  | .jgt_K _ _ _ => Q
+  | .jne_X _ _ _ => Q
+  | .jne_K _ _ _ => Q
+  | .jeq_X _ _ _ => Q
+  | .jeq_K _ _ _ => Q
+  | .jset_K _ _ _ => Q
+  | .jset_X _ _ _ => Q
+  | .ldh_X dst src index => fun s => ∃ val,s.[index + s.(src)] = some val ∧  Q ( s.[dst ↦ val] )
+--  | .ldxh_X dst index => fun s => ∃ val,s.[index] = some val ∧  Q ( s.[dst ↦ val] )
+  | .sth_X src index => fun s => Q ( s.[index]:= s.(src) )
+  | .sth_K imm index => fun s => Q ( s.[index]:= imm )
   | .exit => Q
 
 def blockWP (instrs : List opCode) (Q : Assert) : Assert :=
@@ -42,7 +42,7 @@ def vcg (code : Code) (Q : Assert) (inv : InvMap) : ℕ → ℕ → VCGResult
   | fuel + 1, pc =>
     match code.get? pc with
     | none => { pre := Q, vcs := [] }
-    | some (.jne_X_32 dst src offset) =>
+    | some (.jne_X dst src offset) =>
       match inv (pc + offset + 1) with
         | some iLoop =>
           let fallThrough := vcg code Q inv fuel (pc + 1)
@@ -63,7 +63,7 @@ def vcg (code : Code) (Q : Assert) (inv : InvMap) : ℕ → ℕ → VCGResult
             (s.(dst) = s.(src) → fallThrough.pre s)
           { pre := pre
             vcs := taken.vcs ++ fallThrough.vcs }
-    | some (.jne_K_32 dst imm offset) =>
+    | some (.jne_K dst imm offset) =>
       match inv (pc + offset + 1) with
         | some iLoop =>
           let fallThrough := vcg code Q inv fuel (pc + 1)
@@ -84,7 +84,7 @@ def vcg (code : Code) (Q : Assert) (inv : InvMap) : ℕ → ℕ → VCGResult
             (s.(dst) = imm → fallThrough.pre s)
           { pre := pre
             vcs := taken.vcs ++ fallThrough.vcs }
-    | some (.jeq_X_32 dst src offset) =>
+    | some (.jeq_X dst src offset) =>
       match inv (pc + offset + 1) with
         | some iLoop =>
           let fallThrough := vcg code Q inv fuel (pc + 1)
@@ -105,7 +105,7 @@ def vcg (code : Code) (Q : Assert) (inv : InvMap) : ℕ → ℕ → VCGResult
             (s.(dst) ≠ s.(src) → fallThrough.pre s)
           { pre := pre
             vcs := taken.vcs ++ fallThrough.vcs }
-    | some (.jeq_K_32 dst imm offset) =>
+    | some (.jeq_K dst imm offset) =>
       match inv (pc + offset + 1) with
         | some iLoop =>
           let fallThrough := vcg code Q inv fuel (pc + 1)
@@ -126,7 +126,7 @@ def vcg (code : Code) (Q : Assert) (inv : InvMap) : ℕ → ℕ → VCGResult
             (s.(dst) ≠ imm → fallThrough.pre s)
           { pre := pre
             vcs := taken.vcs ++ fallThrough.vcs }
-    | some (.jset_X_32 dst src offset) =>
+    | some (.jset_X dst src offset) =>
       match inv (pc + offset + 1) with
         | some iLoop =>
           let fallThrough := vcg code Q inv fuel (pc + 1)
@@ -147,7 +147,7 @@ def vcg (code : Code) (Q : Assert) (inv : InvMap) : ℕ → ℕ → VCGResult
             (s.(dst) &&& s.(src) = 0 → fallThrough.pre s)
           { pre := pre
             vcs := taken.vcs ++ fallThrough.vcs }
-    | some (.jset_K_32 dst imm offset) =>
+    | some (.jset_K dst imm offset) =>
       match inv (pc + offset + 1) with
         | some iLoop =>
           let fallThrough := vcg code Q inv fuel (pc + 1)
@@ -168,7 +168,7 @@ def vcg (code : Code) (Q : Assert) (inv : InvMap) : ℕ → ℕ → VCGResult
             (s.(dst) &&& imm = 0 → fallThrough.pre s)
           { pre := pre
             vcs := taken.vcs ++ fallThrough.vcs }
-    | some (.jgt_X_32 dst src offset) =>
+    | some (.jgt_X dst src offset) =>
       match inv (pc + offset + 1) with
         | some iLoop =>
           let fallThrough := vcg code Q inv fuel (pc + 1)
@@ -189,7 +189,7 @@ def vcg (code : Code) (Q : Assert) (inv : InvMap) : ℕ → ℕ → VCGResult
             (s.(dst) ≤ s.(src) → fallThrough.pre s)
           { pre := pre
             vcs := taken.vcs ++ fallThrough.vcs }
-    | some (.jgt_K_32 dst imm offset) =>
+    | some (.jgt_K dst imm offset) =>
       match inv (pc + offset + 1) with
         | some iLoop =>
           let fallThrough := vcg code Q inv fuel (pc + 1)
@@ -246,18 +246,18 @@ theorem wp_sound
     ⦃ wp i Q ⦄ prog @ pc ⦃ Q ⦄ := by
     --Triple wp i Q  prog  Q := by
   match i with
-  | .mov_K_32 dst imm  => exact Triple.mov_K_32 hfetch
-  | .mov_X_32 dst src  => exact Triple.mov_X_32 hfetch
-  | .add_K_32 dst imm => exact Triple.add_K_32 hfetch
-  | .add_X_32 dst src => exact Triple.add_X_32 hfetch
-  | .and_K_32 dst imm => exact Triple.and_K_32 hfetch
-  | .and_X_32 dst src => exact Triple.and_X_32 hfetch
-  | .ldh_X_32 dst src index => exact Triple.ldh_X_32 hfetch
-  | .ldxh_X_32 dst index => exact Triple.ldxh_X_32 hfetch
-  | .sth_X_32 src index => exact Triple.sth_X_32 hfetch
-  | .sth_K_32 imm index => exact Triple.sth_K_32 hfetch
+  | .mov_K dst imm  => exact Triple.mov_K hfetch
+  | .mov_X dst src  => exact Triple.mov_X hfetch
+  | .add_K dst imm => exact Triple.add_K hfetch
+  | .add_X dst src => exact Triple.add_X hfetch
+  | .and_K dst imm => exact Triple.and_K hfetch
+  | .and_X dst src => exact Triple.and_X hfetch
+  | .ldh_X dst src index => exact Triple.ldh_X hfetch
+--  | .ldxh_X dst index => exact Triple.ldxh_X hfetch
+  | .sth_X src index => exact Triple.sth_X hfetch
+  | .sth_K imm index => exact Triple.sth_K hfetch
   | .exit => exact Triple.exit hfetch
-  | .jgt_X_32 dst src offset =>
+  | .jgt_X dst src offset =>
     change ⦃ Q ⦄ prog @ pc ⦃ Q ⦄
     apply Triple.consequence
       (P := fun s => ( s.(dst) > s.(src) ∧ Q s) ∨ ( s.(dst) ≤ s.(src) ∧ Q s))
@@ -267,12 +267,12 @@ theorem wp_sound
       · exact Or.inr ⟨h, hQs⟩
       · exact Or.inl ⟨Nat.lt_of_not_le h, hQs⟩
     · exact Triple.disj
-            (Triple.jgt_X_32_true hfetch)
-            (Triple.jgt_X_32_false hfetch)
+            (Triple.jgt_X_true hfetch)
+            (Triple.jgt_X_false hfetch)
     · -- hQ : Q ⊢ₐ Q
       intro s h
       exact h
-  | .jgt_K_32 dst imm offset =>
+  | .jgt_K dst imm offset =>
     change ⦃ Q ⦄ prog @ pc ⦃ Q ⦄
     apply Triple.consequence
       (P := fun s => ( s.(dst) > imm ∧ Q s) ∨ ( s.(dst) ≤ imm ∧ Q s))
@@ -282,12 +282,12 @@ theorem wp_sound
       · exact Or.inr ⟨h, hQs⟩
       · exact Or.inl ⟨Nat.lt_of_not_le h, hQs⟩
     · exact Triple.disj
-            (Triple.jgt_K_32_true hfetch)
-            (Triple.jgt_K_32_false hfetch)
+            (Triple.jgt_K_true hfetch)
+            (Triple.jgt_K_false hfetch)
     · -- hQ : Q ⊢ₐ Q
       intro s h
       exact h
-  | .jne_X_32 dst src offset =>
+  | .jne_X dst src offset =>
     change ⦃ Q ⦄ prog @ pc ⦃ Q ⦄
     apply Triple.consequence
       (P := fun s => ( s.(dst) ≠ s.(src) ∧ Q s) ∨ ( s.(dst) = s.(src) ∧ Q s))
@@ -297,12 +297,12 @@ theorem wp_sound
       · exact Or.inr ⟨h, hQs⟩
       · exact Or.inl ⟨fun eq => h eq, hQs⟩
     · exact Triple.disj
-            (Triple.jne_X_32_true hfetch)
-            (Triple.jne_X_32_false hfetch)
+            (Triple.jne_X_true hfetch)
+            (Triple.jne_X_false hfetch)
     · -- hQ : Q ⊢ₐ Q
       intro s h
       exact h
-  | .jne_K_32 dst imm offset =>
+  | .jne_K dst imm offset =>
     change ⦃ Q ⦄ prog @ pc ⦃ Q ⦄
     apply Triple.consequence
       (P := fun s => ( s.(dst) ≠ imm ∧ Q s) ∨ ( s.(dst) = imm ∧ Q s))
@@ -312,12 +312,12 @@ theorem wp_sound
       · exact Or.inr ⟨h, hQs⟩
       · exact Or.inl ⟨h, hQs⟩
     · exact Triple.disj
-            (Triple.jne_K_32_true hfetch)
-            (Triple.jne_K_32_false hfetch)
+            (Triple.jne_K_true hfetch)
+            (Triple.jne_K_false hfetch)
     · -- hQ : Q ⊢ₐ Q
       intro s h
       exact h
-  | .jeq_X_32 dst src offset =>
+  | .jeq_X dst src offset =>
     change ⦃ Q ⦄ prog @ pc ⦃ Q ⦄
     apply Triple.consequence
       (P := fun s => ( s.(dst) = s.(src) ∧ Q s) ∨ ( s.(dst) ≠ s.(src) ∧ Q s))
@@ -327,12 +327,12 @@ theorem wp_sound
       · exact Or.inr ⟨h, hQs⟩
       · exact Or.inl ⟨Classical.not_not.mp h, hQs⟩
     · exact Triple.disj
-            (Triple.jeq_X_32_true hfetch)
-            (Triple.jeq_X_32_false hfetch)
+            (Triple.jeq_X_true hfetch)
+            (Triple.jeq_X_false hfetch)
     · -- hQ : Q ⊢ₐ Q
       intro s h
       exact h
-  | .jeq_K_32 dst imm offset =>
+  | .jeq_K dst imm offset =>
     change ⦃ Q ⦄ prog @ pc ⦃ Q ⦄
     apply Triple.consequence
       (P := fun s => ( s.(dst) = imm ∧ Q s) ∨ ( s.(dst) ≠ imm ∧ Q s))
@@ -342,12 +342,12 @@ theorem wp_sound
       · exact Or.inr ⟨h, hQs⟩
       · exact Or.inl ⟨Classical.not_not.mp h, hQs⟩
     · exact Triple.disj
-            (Triple.jeq_K_32_true hfetch)
-            (Triple.jeq_K_32_false hfetch)
+            (Triple.jeq_K_true hfetch)
+            (Triple.jeq_K_false hfetch)
     · -- hQ : Q ⊢ₐ Q
       intro s h
       exact h
-  | .jset_X_32 dst src offset =>
+  | .jset_X dst src offset =>
     change ⦃ Q ⦄ prog @ pc ⦃ Q ⦄
     apply Triple.consequence
       (P := fun s => ( s.(dst) &&& s.(src) ≠ 0 ∧ Q s) ∨ ( s.(dst) &&& s.(src) = 0 ∧ Q s))
@@ -357,12 +357,12 @@ theorem wp_sound
       · exact Or.inr ⟨h, hQs⟩
       · exact Or.inl ⟨ h, hQs⟩
     · exact Triple.disj
-            (Triple.jset_X_32_true hfetch)
-            (Triple.jset_X_32_false hfetch)
+            (Triple.jset_X_true hfetch)
+            (Triple.jset_X_false hfetch)
     · -- hQ : Q ⊢ₐ Q
       intro s h
       exact h
-  | .jset_K_32 dst imm offset =>
+  | .jset_K dst imm offset =>
     change ⦃ Q ⦄ prog @ pc ⦃ Q ⦄
     apply Triple.consequence
       (P := fun s => ( s.(dst) &&& imm ≠ 0 ∧ Q s) ∨ ( s.(dst) &&& imm = 0 ∧ Q s))
@@ -372,8 +372,8 @@ theorem wp_sound
       · exact Or.inr ⟨h, hQs⟩
       · exact Or.inl ⟨h, hQs⟩
     · exact Triple.disj
-            (Triple.jset_K_32_true hfetch)
-            (Triple.jset_K_32_false hfetch)
+            (Triple.jset_K_true hfetch)
+            (Triple.jset_K_false hfetch)
     · -- hQ : Q ⊢ₐ Q
       intro s h
       exact h

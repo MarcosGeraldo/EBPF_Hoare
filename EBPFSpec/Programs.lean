@@ -2,10 +2,10 @@ import EBPFSpec.Ver_Cond_Gen_Sound
 
 
 def incrMem : Code :=
-  [ .ldxh_X_32 (Reg.r2) 0
-  , .mov_K_32 (Reg.r3) 1
-  , .add_X_32 Reg.r2 Reg.r3
-  , .sth_X_32 Reg.r2 0
+  [ .ldh_X .r2 .r_ 0
+  , .mov_K .r3 1
+  , .add_X Reg.r2 Reg.r3
+  , .sth_X Reg.r2 0
   , .exit
   ]
 
@@ -30,9 +30,9 @@ theorem incrMem_correct (v : ℕ) :
     intro s hs; exact hs
 
 def test_add : Code :=
-  [ .mov_K_32 (Reg.r1) 1
-  , .mov_K_32 (Reg.r2) 2
-  , .add_X_32 Reg.r2 Reg.r1
+  [ .mov_K (Reg.r1) 1
+  , .mov_K (Reg.r2) 2
+  , .add_X Reg.r2 Reg.r1
   , .exit
   ]
 
@@ -78,9 +78,9 @@ theorem test_add_correct_VCG :
     . simp
 
 def test_exit : Code :=
-  [ .mov_K_32 (Reg.r0) 1
+  [ .mov_K (Reg.r0) 1
   , .exit
-  , .mov_K_32 (Reg.r0) 0
+  , .mov_K (Reg.r0) 0
   , .exit
   ]
 
@@ -111,11 +111,11 @@ theorem test_exit_correct :
 
 
 def test_JMP : Code :=
-  [ .mov_K_32 (Reg.r0) 1
-  , .mov_K_32 (Reg.r1) 5
-  , .mov_K_32 (Reg.r2) 6
-  , .jne_X_32 .r1 .r2 1
-  , .mov_K_32 (Reg.r0) 0
+  [ .mov_K (Reg.r0) 1
+  , .mov_K (Reg.r1) 5
+  , .mov_K (Reg.r2) 6
+  , .jne_X .r1 .r2 1
+  , .mov_K (Reg.r0) 0
   , .exit
   ]
 
@@ -163,11 +163,11 @@ theorem test_JMP_correct_VCG :
   -/
 
 def prog_only_arp : Code :=
-  [ .ldxh_X_32 .r1 12
-  , .mov_K_32 .r0 1
-  , .jne_K_32 .r1 0x0806 1
+  [ .ldh_X .r1 .r_ 12
+  , .mov_K .r0 1
+  , .jne_K .r1 0x0806 1
   , .exit
-  , .mov_K_32 .r0 0
+  , .mov_K .r0 0
   , .exit
   ]
 
@@ -210,13 +210,13 @@ theorem prog_only_arp_correct_VCG :
 -/
 def prog_only_Ipv4_TCP : Code :=
   [
-    .ldxh_X_32 .r1 12
-  , .jne_K_32 .r1 0x0800 4
-  , .ldxh_X_32 .r1 23
-  , .jne_K_32 .r1 0x06 2
-  , .mov_K_32 .r0 1 --pass
+    .ldh_X .r1 .r_ 12
+  , .jne_K .r1 0x0800 4
+  , .ldh_X .r1 .r_ 23
+  , .jne_K .r1 0x06 2
+  , .mov_K .r0 1 --pass
   , .exit
-  , .mov_K_32 .r0 0 --drop
+  , .mov_K .r0 0 --drop
   , .exit
   ]
 
@@ -279,20 +279,20 @@ subnet : Code :=[
 
 def prog_subnet : Code :=
   [
-  .mov_K_32 .r1  0x0
-  ,.mov_K_32 .r2  0xe
-  ,.ldh_X_32 .r3 .r1 12
-  ,.jne_K_32 .r3  0x81 4
-  ,.mov_K_32 .r2 0x12
-  ,.ldh_X_32 .r3 .r1 16
-  ,.and_K_32 .r3  0xffff
-  ,.jne_K_32 .r3  0x8  6
-  ,.add_X_32 .r1  .r2
-  ,.mov_K_32 .r0 0x1
-  ,.ldh_X_32 .r1  .r1 16
-  ,.and_K_32 .r1  0xffffff
-  ,.jeq_K_32 .r1  0x1a8c0 2
-  ,.mov_K_32 .r0  0x0
+  .mov_K .r1  0x0
+  ,.mov_K .r2  0xe
+  ,.ldh_X .r3 .r1 12
+  ,.jne_K .r3  0x81 4
+  ,.mov_K .r2 0x12
+  ,.ldh_X .r3 .r1 16
+  ,.and_K .r3  0xffff
+  ,.jne_K .r3  0x8  6
+  ,.add_X .r1  .r2
+  ,.mov_K .r0 0x1
+  ,.ldh_X .r1  .r1 16
+  ,.and_K .r1  0xffffff
+  ,.jeq_K .r1  0x1a8c0 2
+  ,.mov_K .r0  0x0
   ,.exit
   ]
 
@@ -354,21 +354,21 @@ theorem prog_subnet_correct_VCG :
 -/
 
 def prog_only_IPv4_TCP_SSH : Code :=
-  [ .ldxh_X_32 .r1 12
-  , .jne_K_32 .r1 0x08 11 -- drop
-  , .ldxh_X_32 .r1 23
-  , .jne_K_32 .r1 0x06 9 -- drop
-  , .ldxh_X_32 .r1 20
-  , .jset_K_32 .r1 0x1fff 7 -- drop
---  , .ldxh_X_32 .r2 14 -- ldxb 4 bits menos ignificativos
-  , .mov_K_32 .r2 20  -- PC 6: SIMULAÇÃO: tamanho do IP Header (IHL * 4 = 20)  , .ldh_X_32 .r1 .r2 14 --[.r2 + index]
-  , .ldh_X_32 .r1 .r2 14 --[.r2 + index]
-  , .jeq_K_32 .r1 0x16 2 -- pass
-  , .ldh_X_32 .r1 .r2 16 --[.r2 + index]
-  , .jne_K_32 .r1 0x16 2 -- drop
-  , .mov_K_32 .r0 1 --pass
+  [ .ldh_X .r1 .r_ 12
+  , .jne_K .r1 0x08 11 -- drop
+  , .ldh_X .r1 .r_ 23
+  , .jne_K .r1 0x06 9 -- drop
+  , .ldh_X .r1 .r_ 20
+  , .jset_K .r1 0x1fff 7 -- drop
+--  , .ldxh_X .r2 14 -- ldxb 4 bits menos ignificativos
+  , .mov_K .r2 20  -- PC 6: SIMULAÇÃO: tamanho do IP Header (IHL * 4 = 20)  , .ldh_X .r1 .r2 14 --[.r2 + index]
+  , .ldh_X .r1 .r2 14 --[.r2 + index]
+  , .jeq_K .r1 0x16 2 -- pass
+  , .ldh_X .r1 .r2 16 --[.r2 + index]
+  , .jne_K .r1 0x16 2 -- drop
+  , .mov_K .r0 1 --pass
   , .exit
-  , .mov_K_32 .r0 0 --drop
+  , .mov_K .r0 0 --drop
   , .exit
   ]
 

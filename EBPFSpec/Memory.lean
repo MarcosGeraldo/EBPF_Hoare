@@ -71,17 +71,7 @@ def readStack (s : MachineState) (index : ℕ ) : Option ℕ :=
 def writeStack (s : MachineState) (index : ℕ ) (n : ℕ ) : MachineState :=
   match s with
   | (s_Reg , s_Stack) => ( s_Reg, updateStack s_Stack index n)
-/-
--- Escrita e leitura do pc
-def readPc (s : MachineState) : ℕ :=
-  match s with
-  | (_ , _ , pc) => pc
 
-def writePc (s : MachineState) (n : ℕ ) : MachineState :=
-  match s with
-  | (s_Reg , s_Stack , pc) => ( s_Reg, s_Stack , (pc + n) )
-
--/
 @[simp]
 def getStack (s : MachineState) : StackState :=
   match s with
@@ -96,7 +86,6 @@ def getRegs (s : MachineState) : RegsState :=
 -------------------- Macros -----------------------------
 ------------------------------------------------------------
 
-#check readStackNat
 -- Macro para escrita e leitura da pilha
 macro s:term ".[" index:term "]:=" val:term : term =>
   `(writeStack $s $index $val)
@@ -118,12 +107,3 @@ macro s:term ":Regs" : term =>
   `(getRegs $s )
 -- s.[ Reg.r0 ↦ 10]
 -- s.(r0)
-/-
--- Macro para escrita e leitura do pc
-macro s:term ":PC" : term =>
-  `(readPc $s)
-macro s:term ":PC↦" val:term : term =>
-  `(writePc $s $val)
--- s:PC
--- s:PC↦ 1
--/

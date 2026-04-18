@@ -57,26 +57,10 @@ theorem vcg_core_sound (fuel : ℕ) (code : Code) (Q : Assert) (inv : InvMap) (p
       exact Triple.halt h
     | some instr =>
       cases instr with
-      | jne_X_32 dst src offset =>
+      | jne_X dst src offset =>
         simp only [vcg, h]
         cases hinv : inv (pc + offset + 1) with
         | some I =>
-          /-simp only [vcg, h, hinv] at hVCs ⊢
-          have hvcFall : ∀ s, I s → (s.(dst) = s.(src)) → (vcg code Q inv n (pc + 1)).pre s :=
-            hVCs _ List.mem_cons_self
-          have hVCs_ft : ∀ vc ∈ (vcg code Q inv n (pc + 1)).vcs, vc :=
-            fun vc hvc => hVCs vc (List.mem_cons_of_mem _ hvc)
-          apply Triple.consequence
-            (P := fun s => (s.(dst) ≠ s.(src) ∧ I s) ∨
-                           (s.(dst) = s.(src) ∧ (vcg code Q inv n (pc + 1)).pre s))
-          · intro s hIs
-            by_cases hc : s.(dst) = s.(src)
-            · exact Or.inr ⟨hc, hvcFall s hIs hc⟩
-            · exact Or.inl ⟨hc, hIs⟩
-          · exact Triple.disj
-              (Triple.seq (Triple.jne_X_32_true h) (hInvs (pc + offset) I hinv))
-              (Triple.seq (Triple.jne_X_32_false h) (ih (pc + 1) hVCs_ft))
-          · intro s hs; exact hs-/
           simp only [vcg, h, hinv] at hVCs ⊢
           have hVCs_ft : ∀ vc ∈ (vcg code Q inv n (pc + 1)).vcs, vc := fun vc hvc => hVCs vc hvc
           apply Triple.consequence
@@ -87,8 +71,8 @@ theorem vcg_core_sound (fuel : ℕ) (code : Code) (Q : Assert) (inv : InvMap) (p
             · exact Or.inr ⟨hc, h2 hc⟩
             · exact Or.inl ⟨hc, h1 hc⟩
           · exact Triple.disj
-              (Triple.seq (Triple.jne_X_32_true h) (hInvs (pc + offset + 1) I hinv))
-              (Triple.seq (Triple.jne_X_32_false h) (ih (pc + 1) hVCs_ft))
+              (Triple.seq (Triple.jne_X_true h) (hInvs (pc + offset + 1) I hinv))
+              (Triple.seq (Triple.jne_X_false h) (ih (pc + 1) hVCs_ft))
           · intro s hs; exact hs
         | none =>
           simp only [vcg, h, hinv] at hVCs ⊢
@@ -104,29 +88,13 @@ theorem vcg_core_sound (fuel : ℕ) (code : Code) (Q : Assert) (inv : InvMap) (p
             · exact Or.inr ⟨hc, h2 hc⟩
             · exact Or.inl ⟨hc, h1 hc⟩
           · exact Triple.disj
-              (Triple.seq (Triple.jne_X_32_true h) (ih (pc + offset + 1) hVCs_taken))
-              (Triple.seq (Triple.jne_X_32_false h) (ih (pc + 1) hVCs_ft))
+              (Triple.seq (Triple.jne_X_true h) (ih (pc + offset + 1) hVCs_taken))
+              (Triple.seq (Triple.jne_X_false h) (ih (pc + 1) hVCs_ft))
           · intro s hs; exact hs
-      | jne_K_32 dst imm offset =>
+      | jne_K dst imm offset =>
         simp only [vcg, h]
         cases hinv : inv (pc + offset + 1) with
         | some I =>
-          /-simp only [vcg, h, hinv] at hVCs
-          have hvcFall : ∀ s, I s → (s.(dst) = imm) → (vcg code Q inv n (pc + 1)).pre s :=
-            hVCs _ (List.mem_cons_self _ _)
-          have hVCs_ft : ∀ vc ∈ (vcg code Q inv n (pc + 1)).vcs, vc :=
-            fun vc hvc => hVCs vc (List.mem_cons_of_mem _ hvc)
-          apply Triple.consequence
-            (P := fun s => (s.(dst) ≠ imm ∧ I s) ∨
-                           (s.(dst) = imm ∧ (vcg code Q inv n (pc + 1)).pre s))
-          · intro s hIs
-            by_cases hc : s.(dst) = imm
-            · exact Or.inr ⟨hc, hvcFall s hIs hc⟩
-            · exact Or.inl ⟨hc, hIs⟩
-          · exact Triple.disj
-              (Triple.seq (Triple.jne_K_32_true h) (hInvs (pc + offset) I hinv))
-              (Triple.seq (Triple.jne_K_32_false h) (ih (pc + 1) hVCs_ft))
-          · intro s hs; exact hs-/
           simp only [vcg, h, hinv] at hVCs ⊢
           have hVCs_ft : ∀ vc ∈ (vcg code Q inv n (pc + 1)).vcs, vc := fun vc hvc => hVCs vc hvc
           apply Triple.consequence
@@ -137,8 +105,8 @@ theorem vcg_core_sound (fuel : ℕ) (code : Code) (Q : Assert) (inv : InvMap) (p
             · exact Or.inr ⟨hc, h2 hc⟩
             · exact Or.inl ⟨hc, h1 hc⟩
           · exact Triple.disj
-              (Triple.seq (Triple.jne_K_32_true h) (hInvs (pc + offset + 1) I hinv))
-              (Triple.seq (Triple.jne_K_32_false h) (ih (pc + 1) hVCs_ft))
+              (Triple.seq (Triple.jne_K_true h) (hInvs (pc + offset + 1) I hinv))
+              (Triple.seq (Triple.jne_K_false h) (ih (pc + 1) hVCs_ft))
           · intro s hs; exact hs
         | none =>
           simp only [vcg, h, hinv] at hVCs ⊢
@@ -154,10 +122,10 @@ theorem vcg_core_sound (fuel : ℕ) (code : Code) (Q : Assert) (inv : InvMap) (p
             · exact Or.inr ⟨hc, h2 hc⟩
             · exact Or.inl ⟨hc, h1 hc⟩
           · exact Triple.disj
-              (Triple.seq (Triple.jne_K_32_true h) (ih (pc + offset + 1) hVCs_taken))
-              (Triple.seq (Triple.jne_K_32_false h) (ih (pc + 1) hVCs_ft))
+              (Triple.seq (Triple.jne_K_true h) (ih (pc + offset + 1) hVCs_taken))
+              (Triple.seq (Triple.jne_K_false h) (ih (pc + 1) hVCs_ft))
           · intro s hs; exact hs
-      | jeq_X_32 dst src offset =>
+      | jeq_X dst src offset =>
         simp only [vcg, h]
         cases hinv : inv (pc + offset + 1) with
         | some I =>
@@ -171,8 +139,8 @@ theorem vcg_core_sound (fuel : ℕ) (code : Code) (Q : Assert) (inv : InvMap) (p
             · exact Or.inr ⟨hc, h2 hc⟩
             · exact Or.inl ⟨Classical.not_not.mp hc, h1 (Classical.not_not.mp hc)⟩
           · exact Triple.disj
-              (Triple.seq (Triple.jeq_X_32_true h) (hInvs (pc + offset + 1) I hinv))
-              (Triple.seq (Triple.jeq_X_32_false h) (ih (pc + 1) hVCs_ft))
+              (Triple.seq (Triple.jeq_X_true h) (hInvs (pc + offset + 1) I hinv))
+              (Triple.seq (Triple.jeq_X_false h) (ih (pc + 1) hVCs_ft))
           · intro s hs; exact hs
         | none =>
           simp only [vcg, h, hinv] at hVCs ⊢
@@ -188,29 +156,13 @@ theorem vcg_core_sound (fuel : ℕ) (code : Code) (Q : Assert) (inv : InvMap) (p
             · exact Or.inr ⟨hc, h2 hc⟩
             · exact Or.inl ⟨Classical.not_not.mp hc, h1 (Classical.not_not.mp hc)⟩
           · exact Triple.disj
-              (Triple.seq (Triple.jeq_X_32_true h) (ih (pc + offset + 1) hVCs_taken))
-              (Triple.seq (Triple.jeq_X_32_false h) (ih (pc + 1) hVCs_ft))
+              (Triple.seq (Triple.jeq_X_true h) (ih (pc + offset + 1) hVCs_taken))
+              (Triple.seq (Triple.jeq_X_false h) (ih (pc + 1) hVCs_ft))
           · intro s hs; exact hs
-      | jeq_K_32 dst imm offset =>
+      | jeq_K dst imm offset =>
         simp only [vcg, h]
         cases hinv : inv (pc + offset + 1) with
         | some I =>
-          /-simp only [vcg, h, hinv] at hVCs
-          have hvcFall : ∀ s, I s → (s.(dst) = imm) → (vcg code Q inv n (pc + 1)).pre s :=
-            hVCs _ (List.mem_cons_self _ _)
-          have hVCs_ft : ∀ vc ∈ (vcg code Q inv n (pc + 1)).vcs, vc :=
-            fun vc hvc => hVCs vc (List.mem_cons_of_mem _ hvc)
-          apply Triple.consequence
-            (P := fun s => (s.(dst) ≠ imm ∧ I s) ∨
-                           (s.(dst) = imm ∧ (vcg code Q inv n (pc + 1)).pre s))
-          · intro s hIs
-            by_cases hc : s.(dst) = imm
-            · exact Or.inr ⟨hc, hvcFall s hIs hc⟩
-            · exact Or.inl ⟨hc, hIs⟩
-          · exact Triple.disj
-              (Triple.seq (Triple.jne_K_32_true h) (hInvs (pc + offset) I hinv))
-              (Triple.seq (Triple.jne_K_32_false h) (ih (pc + 1) hVCs_ft))
-          · intro s hs; exact hs-/
           simp only [vcg, h, hinv] at hVCs ⊢
           have hVCs_ft : ∀ vc ∈ (vcg code Q inv n (pc + 1)).vcs, vc := fun vc hvc => hVCs vc hvc
           apply Triple.consequence
@@ -221,8 +173,8 @@ theorem vcg_core_sound (fuel : ℕ) (code : Code) (Q : Assert) (inv : InvMap) (p
             · exact Or.inr ⟨hc, h2  hc⟩
             · exact Or.inl ⟨Classical.not_not.mp hc, h1 (Classical.not_not.mp hc)⟩
           · exact Triple.disj
-              (Triple.seq (Triple.jeq_K_32_true h) (hInvs (pc + offset + 1) I hinv))
-              (Triple.seq (Triple.jeq_K_32_false h) (ih (pc + 1) hVCs_ft))
+              (Triple.seq (Triple.jeq_K_true h) (hInvs (pc + offset + 1) I hinv))
+              (Triple.seq (Triple.jeq_K_false h) (ih (pc + 1) hVCs_ft))
           · intro s hs; exact hs
         | none =>
           simp only [vcg, h, hinv] at hVCs ⊢
@@ -238,29 +190,13 @@ theorem vcg_core_sound (fuel : ℕ) (code : Code) (Q : Assert) (inv : InvMap) (p
             · exact Or.inr ⟨hc, h2 hc⟩
             · exact Or.inl ⟨Classical.not_not.mp hc, h1 (Classical.not_not.mp hc)⟩
           · exact Triple.disj
-              (Triple.seq (Triple.jeq_K_32_true h) (ih (pc + offset + 1) hVCs_taken))
-              (Triple.seq (Triple.jeq_K_32_false h) (ih (pc + 1) hVCs_ft))
+              (Triple.seq (Triple.jeq_K_true h) (ih (pc + offset + 1) hVCs_taken))
+              (Triple.seq (Triple.jeq_K_false h) (ih (pc + 1) hVCs_ft))
           · intro s hs; exact hs
-      | jset_X_32 dst src offset =>
+      | jset_X dst src offset =>
         simp only [vcg, h]
         cases hinv : inv (pc + offset + 1) with
         | some I =>
-          /-simp only [vcg, h, hinv] at hVCs ⊢
-          have hvcFall : ∀ s, I s → (s.(dst) = s.(src)) → (vcg code Q inv n (pc + 1)).pre s :=
-            hVCs _ List.mem_cons_self
-          have hVCs_ft : ∀ vc ∈ (vcg code Q inv n (pc + 1)).vcs, vc :=
-            fun vc hvc => hVCs vc (List.mem_cons_of_mem _ hvc)
-          apply Triple.consequence
-            (P := fun s => (s.(dst) ≠ s.(src) ∧ I s) ∨
-                           (s.(dst) = s.(src) ∧ (vcg code Q inv n (pc + 1)).pre s))
-          · intro s hIs
-            by_cases hc : s.(dst) = s.(src)
-            · exact Or.inr ⟨hc, hvcFall s hIs hc⟩
-            · exact Or.inl ⟨hc, hIs⟩
-          · exact Triple.disj
-              (Triple.seq (Triple.jne_X_32_true h) (hInvs (pc + offset) I hinv))
-              (Triple.seq (Triple.jne_X_32_false h) (ih (pc + 1) hVCs_ft))
-          · intro s hs; exact hs-/
           simp only [vcg, h, hinv] at hVCs ⊢
           have hVCs_ft : ∀ vc ∈ (vcg code Q inv n (pc + 1)).vcs, vc := fun vc hvc => hVCs vc hvc
           apply Triple.consequence
@@ -271,8 +207,8 @@ theorem vcg_core_sound (fuel : ℕ) (code : Code) (Q : Assert) (inv : InvMap) (p
             · exact Or.inr ⟨hc, h2 hc⟩
             · exact Or.inl ⟨hc, h1 hc⟩
           · exact Triple.disj
-              (Triple.seq (Triple.jset_X_32_true h) (hInvs (pc + offset + 1) I hinv))
-              (Triple.seq (Triple.jset_X_32_false h) (ih (pc + 1) hVCs_ft))
+              (Triple.seq (Triple.jset_X_true h) (hInvs (pc + offset + 1) I hinv))
+              (Triple.seq (Triple.jset_X_false h) (ih (pc + 1) hVCs_ft))
           · intro s hs; exact hs
         | none =>
           simp only [vcg, h, hinv] at hVCs ⊢
@@ -288,29 +224,13 @@ theorem vcg_core_sound (fuel : ℕ) (code : Code) (Q : Assert) (inv : InvMap) (p
             · exact Or.inr ⟨hc, h2 hc⟩
             · exact Or.inl ⟨hc, h1 hc⟩
           · exact Triple.disj
-              (Triple.seq (Triple.jset_X_32_true h) (ih (pc + offset + 1) hVCs_taken))
-              (Triple.seq (Triple.jset_X_32_false h) (ih (pc + 1) hVCs_ft))
+              (Triple.seq (Triple.jset_X_true h) (ih (pc + offset + 1) hVCs_taken))
+              (Triple.seq (Triple.jset_X_false h) (ih (pc + 1) hVCs_ft))
           · intro s hs; exact hs
-      | jset_K_32 dst imm offset =>
+      | jset_K dst imm offset =>
         simp only [vcg, h]
         cases hinv : inv (pc + offset + 1) with
         | some I =>
-          /-simp only [vcg, h, hinv] at hVCs
-          have hvcFall : ∀ s, I s → (s.(dst) = imm) → (vcg code Q inv n (pc + 1)).pre s :=
-            hVCs _ (List.mem_cons_self _ _)
-          have hVCs_ft : ∀ vc ∈ (vcg code Q inv n (pc + 1)).vcs, vc :=
-            fun vc hvc => hVCs vc (List.mem_cons_of_mem _ hvc)
-          apply Triple.consequence
-            (P := fun s => (s.(dst) ≠ imm ∧ I s) ∨
-                           (s.(dst) = imm ∧ (vcg code Q inv n (pc + 1)).pre s))
-          · intro s hIs
-            by_cases hc : s.(dst) = imm
-            · exact Or.inr ⟨hc, hvcFall s hIs hc⟩
-            · exact Or.inl ⟨hc, hIs⟩
-          · exact Triple.disj
-              (Triple.seq (Triple.jne_K_32_true h) (hInvs (pc + offset) I hinv))
-              (Triple.seq (Triple.jne_K_32_false h) (ih (pc + 1) hVCs_ft))
-          · intro s hs; exact hs-/
           simp only [vcg, h, hinv] at hVCs ⊢
           have hVCs_ft : ∀ vc ∈ (vcg code Q inv n (pc + 1)).vcs, vc := fun vc hvc => hVCs vc hvc
           apply Triple.consequence
@@ -321,8 +241,8 @@ theorem vcg_core_sound (fuel : ℕ) (code : Code) (Q : Assert) (inv : InvMap) (p
             · exact Or.inr ⟨hc, h2 hc⟩
             · exact Or.inl ⟨hc, h1 hc⟩
           · exact Triple.disj
-              (Triple.seq (Triple.jset_K_32_true h) (hInvs (pc + offset + 1) I hinv))
-              (Triple.seq (Triple.jset_K_32_false h) (ih (pc + 1) hVCs_ft))
+              (Triple.seq (Triple.jset_K_true h) (hInvs (pc + offset + 1) I hinv))
+              (Triple.seq (Triple.jset_K_false h) (ih (pc + 1) hVCs_ft))
           · intro s hs; exact hs
         | none =>
           simp only [vcg, h, hinv] at hVCs ⊢
@@ -338,29 +258,13 @@ theorem vcg_core_sound (fuel : ℕ) (code : Code) (Q : Assert) (inv : InvMap) (p
             · exact Or.inr ⟨hc, h2 hc⟩
             · exact Or.inl ⟨hc, h1 hc⟩
           · exact Triple.disj
-              (Triple.seq (Triple.jset_K_32_true h) (ih (pc + offset + 1) hVCs_taken))
-              (Triple.seq (Triple.jset_K_32_false h) (ih (pc + 1) hVCs_ft))
+              (Triple.seq (Triple.jset_K_true h) (ih (pc + offset + 1) hVCs_taken))
+              (Triple.seq (Triple.jset_K_false h) (ih (pc + 1) hVCs_ft))
           · intro s hs; exact hs
-      | jgt_X_32 dst src offset =>
+      | jgt_X dst src offset =>
         simp only [vcg, h]
         cases hinv : inv (pc + offset + 1) with
         | some I =>
-          /-simp only [vcg, h, hinv] at hVCs
-          have hvcFall : ∀ s, I s → (s.(dst) ≤ s.(src)) → (vcg code Q inv n (pc + 1)).pre s :=
-            hVCs _ (List.mem_cons_self _ _)
-          have hVCs_ft : ∀ vc ∈ (vcg code Q inv n (pc + 1)).vcs, vc :=
-            fun vc hvc => hVCs vc (List.mem_cons_of_mem _ hvc)
-          apply Triple.consequence
-            (P := fun s => (s.(dst) > s.(src) ∧ I s) ∨
-                           (s.(dst) ≤ s.(src) ∧ (vcg code Q inv n (pc + 1)).pre s))
-          · intro s hIs
-            by_cases hc : s.(dst) ≤ s.(src)
-            · exact Or.inr ⟨hc, hvcFall s hIs hc⟩
-            · exact Or.inl ⟨Nat.lt_of_not_le hc, hIs⟩
-          · exact Triple.disj
-              (Triple.seq (Triple.jgt_X_32_true h) (hInvs (pc + offset) I hinv))
-              (Triple.seq (Triple.jgt_X_32_false h) (ih (pc + 1) hVCs_ft))
-          · intro s hs; exact hs-/
           simp only [vcg, h, hinv] at hVCs ⊢
           have hVCs_ft : ∀ vc ∈ (vcg code Q inv n (pc + 1)).vcs, vc := fun vc hvc => hVCs vc hvc
           apply Triple.consequence
@@ -371,8 +275,8 @@ theorem vcg_core_sound (fuel : ℕ) (code : Code) (Q : Assert) (inv : InvMap) (p
             · exact Or.inr ⟨hc, h2 hc⟩
             · exact Or.inl ⟨Nat.lt_of_not_le hc, h1 (Nat.lt_of_not_le hc)⟩
           · exact Triple.disj
-              (Triple.seq (Triple.jgt_X_32_true h) (hInvs (pc + offset + 1) I hinv))
-              (Triple.seq (Triple.jgt_X_32_false h) (ih (pc + 1) hVCs_ft))
+              (Triple.seq (Triple.jgt_X_true h) (hInvs (pc + offset + 1) I hinv))
+              (Triple.seq (Triple.jgt_X_false h) (ih (pc + 1) hVCs_ft))
           · intro s hs; exact hs
         | none =>
           simp only [vcg, h, hinv] at hVCs ⊢
@@ -388,29 +292,13 @@ theorem vcg_core_sound (fuel : ℕ) (code : Code) (Q : Assert) (inv : InvMap) (p
             · exact Or.inr ⟨hc, h2 hc⟩
             · exact Or.inl ⟨Nat.lt_of_not_le hc, h1 (Nat.lt_of_not_le hc)⟩
           · exact Triple.disj
-              (Triple.seq (Triple.jgt_X_32_true h) (ih (pc + offset + 1) hVCs_taken))
-              (Triple.seq (Triple.jgt_X_32_false h) (ih (pc + 1) hVCs_ft))
+              (Triple.seq (Triple.jgt_X_true h) (ih (pc + offset + 1) hVCs_taken))
+              (Triple.seq (Triple.jgt_X_false h) (ih (pc + 1) hVCs_ft))
           · intro s hs; exact hs
-      | jgt_K_32 dst imm offset =>
+      | jgt_K dst imm offset =>
         simp only [vcg, h]
         cases hinv : inv (pc + offset + 1) with
         | some I =>
-          /-simp only [vcg, h, hinv] at hVCs
-          have hvcFall : ∀ s, I s → (s.(dst) ≤ imm) → (vcg code Q inv n (pc + 1)).pre s :=
-            hVCs _ (List.mem_cons_self _ _)
-          have hVCs_ft : ∀ vc ∈ (vcg code Q inv n (pc + 1)).vcs, vc :=
-            fun vc hvc => hVCs vc (List.mem_cons_of_mem _ hvc)
-          apply Triple.consequence
-            (P := fun s => (s.(dst) > imm ∧ I s) ∨
-                           (s.(dst) ≤ imm ∧ (vcg code Q inv n (pc + 1)).pre s))
-          · intro s hIs
-            by_cases hc : s.(dst) ≤ imm
-            · exact Or.inr ⟨hc, hvcFall s hIs hc⟩
-            · exact Or.inl ⟨Nat.lt_of_not_le hc, hIs⟩
-          · exact Triple.disj
-              (Triple.seq (Triple.jgt_K_32_true h) (hInvs (pc + offset) I hinv))
-              (Triple.seq (Triple.jgt_K_32_false h) (ih (pc + 1) hVCs_ft))
-          · intro s hs; exact hs-/
           simp only [vcg, h, hinv] at hVCs ⊢
           have hVCs_ft : ∀ vc ∈ (vcg code Q inv n (pc + 1)).vcs, vc := fun vc hvc => hVCs vc hvc
           apply Triple.consequence
@@ -421,8 +309,8 @@ theorem vcg_core_sound (fuel : ℕ) (code : Code) (Q : Assert) (inv : InvMap) (p
             · exact Or.inr ⟨hc, h2 hc⟩
             · exact Or.inl ⟨Nat.lt_of_not_le hc, h1 (Nat.lt_of_not_le hc)⟩
           · exact Triple.disj
-              (Triple.seq (Triple.jgt_K_32_true h) (hInvs (pc + offset + 1) I hinv))
-              (Triple.seq (Triple.jgt_K_32_false h) (ih (pc + 1) hVCs_ft))
+              (Triple.seq (Triple.jgt_K_true h) (hInvs (pc + offset + 1) I hinv))
+              (Triple.seq (Triple.jgt_K_false h) (ih (pc + 1) hVCs_ft))
           · intro s hs; exact hs
         | none =>
           simp only [vcg, h, hinv] at hVCs ⊢
@@ -438,37 +326,16 @@ theorem vcg_core_sound (fuel : ℕ) (code : Code) (Q : Assert) (inv : InvMap) (p
             · exact Or.inr ⟨hc, h2 hc⟩
             · exact Or.inl ⟨Nat.lt_of_not_le hc, h1 (Nat.lt_of_not_le hc)⟩
           · exact Triple.disj
-              (Triple.seq (Triple.jgt_K_32_true h) (ih (pc + offset + 1) hVCs_taken))
-              (Triple.seq (Triple.jgt_K_32_false h) (ih (pc + 1) hVCs_ft))
+              (Triple.seq (Triple.jgt_K_true h) (ih (pc + offset + 1) hVCs_taken))
+              (Triple.seq (Triple.jgt_K_false h) (ih (pc + 1) hVCs_ft))
           · intro s hs; exact hs
       | exit =>
         simp only [vcg, h] at hVCs ⊢
         exact Triple.exit h
-        /-
-              exact Triple.consequence (fun _ hf => hf.elim) (Triple.halt h) (fun _ hq => hq)
--/
+
       | _ =>
         simp only [vcg, h] at hVCs ⊢
         exact Triple.seq (wp_sound code pc _ _ h) (ih (pc + 1) hVCs)
-/-      | add_K_32 dst imm =>
-        simp only [vcg, h] at hVCs ⊢
-        exact Triple.seq (wp_sound code pc _ _ h) (ih (pc + 1) hVCs)
-      | MUL src dest =>
-        simp only [vcg, h] at hVCs ⊢
-        exact Triple.seq (wp_sound code pc _ _ h) (ih (pc + 1) hVCs)
-      | MOV src dest =>
-        simp only [vcg, h] at hVCs ⊢
-        exact Triple.seq (wp_sound code pc _ _ h) (ih (pc + 1) hVCs)
-      | MOVI dest val =>
-        simp only [vcg, h] at hVCs ⊢
-        exact Triple.seq (wp_sound code pc _ _ h) (ih (pc + 1) hVCs)
-      | LOAD dst addr =>
-        simp only [vcg, h] at hVCs ⊢
-        exact Triple.seq (wp_sound code pc _ _ h) (ih (pc + 1) hVCs)
-      | STORE src addr =>
-        simp only [vcg, h] at hVCs ⊢
-        exact Triple.seq (wp_sound code pc _ _ h) (ih (pc + 1) hVCs)
--/
 
 
 theorem vcg_sound (fuel : ℕ) (code : Code) (P Q : Assert) (inv : InvMap)

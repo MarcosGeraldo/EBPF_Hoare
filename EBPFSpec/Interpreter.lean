@@ -2,71 +2,66 @@ import EBPFSpec.Programs
 
 def step_instr (instr : opCode) (s : MachineState) : (MachineState × ℕ ) :=
   match instr with
-  | .mov_K_32 dst imm => ( s.[dst ↦ imm] , 0)
-  | .mov_X_32 dst src => ( s.[dst ↦ s.(src)] , 0)
-  | .add_K_32 dst imm => ( s.[dst ↦ s.(dst) + imm] , 0)
-  | .add_X_32 dst src => ( s.[dst ↦ s.(dst) + s.(src)] , 0)
-  | .and_K_32 dst imm => ( s.[dst ↦ s.(dst) &&& imm] , 0)
-  | .and_X_32 dst src => ( s.[dst ↦ s.(dst) &&& s.(src)] , 0)
+  | .mov_K dst imm => ( s.[dst ↦ imm] , 0)
+  | .mov_X dst src => ( s.[dst ↦ s.(src)] , 0)
+  | .add_K dst imm => ( s.[dst ↦ s.(dst) + imm] , 0)
+  | .add_X dst src => ( s.[dst ↦ s.(dst) + s.(src)] , 0)
+  | .and_K dst imm => ( s.[dst ↦ s.(dst) &&& imm] , 0)
+  | .and_X dst src => ( s.[dst ↦ s.(dst) &&& s.(src)] , 0)
 
-  | .jgt_X_32 dst src offset =>
+  | .jgt_X dst src offset =>
     if s.(dst) > s.(src) then
       (s , offset)
     else
       (s , 0)
 
-  | .jgt_K_32 dst imm offset =>
+  | .jgt_K dst imm offset =>
     if s.(dst) > imm then
       (s , offset)
     else
       (s , 0)
 
-  | .jne_X_32 dst src offset =>
+  | .jne_X dst src offset =>
     if s.(dst) ≠ s.(src) then
       (s , offset)
     else
       (s , 0)
 
-  | .jne_K_32 dst imm offset =>
+  | .jne_K dst imm offset =>
     if s.(dst) ≠ imm then
       (s , offset)
     else
       (s , 0)
 
-  | .jeq_X_32 dst src offset =>
+  | .jeq_X dst src offset =>
     if s.(dst) = s.(src) then
       (s , offset)
     else
       (s , 0)
 
-  | .jeq_K_32 dst imm offset =>
+  | .jeq_K dst imm offset =>
     if s.(dst) = imm then
       (s , offset)
     else
       (s , 0)
 
-  | .jset_X_32 dst src offset =>
+  | .jset_X dst src offset =>
     if (s.(dst) &&& s.(src)) ≠ 0 then
       (s , offset)
     else
       (s , 0)
 
-  | .jset_K_32 dst imm offset =>
+  | .jset_K dst imm offset =>
     if (s.(dst) &&& imm ) ≠ 0 then
       (s , offset)
     else
       (s , 0)
 
-  | .sth_X_32 src index => (s.[index]:= s.(src) , 0)
+  | .sth_X src index => (s.[index]:= s.(src) , 0)
 
-  | .sth_K_32 imm index =>(s.[index]:= imm , 0)
+  | .sth_K imm index =>(s.[index]:= imm , 0)
 
-  | .ldxh_X_32 dst index =>
-    match s.[index] with
-    | some val => (s.[dst ↦ val ], 0)
-    | none => (s, 0)
-
-  | .ldh_X_32 dst src index =>
+  | .ldh_X dst src index =>
     match s.[index + s.(src)] with
     | some val => (s.[dst ↦ val ], 0)
     | none => (s, 0)
@@ -112,9 +107,9 @@ instance : Repr MachineState where
 
 -- Programa que soma 10 e 20, guardando o resultado no registo r1
 def prog_teste : List opCode :=
-  [ .mov_K_32 .r1 10
-  , .mov_K_32 .r2 20
-  , .add_X_32 .r1 .r2
+  [ .mov_K .r1 10
+  , .mov_K .r2 20
+  , .add_X .r1 .r2
   , .exit
   ]
 
@@ -129,49 +124,40 @@ lemma exec_to_step {code : Code} {pc : PC} {s : MachineState} {instr : opCode}
   cases instr with
   | exit =>
     contradiction
-  | mov_X_32 dst src =>
+  | mov_X dst src =>
     simp [step_instr]
-    exact step.rule_mov_X_32 pc h_fetch
-  | mov_K_32 dst imm =>
+    exact step.rule_mov_X pc h_fetch
+  | mov_K dst imm =>
     simp [step_instr]
-    exact step.rule_mov_K_32 pc h_fetch
-  | add_X_32 dst src =>
+    exact step.rule_mov_K pc h_fetch
+  | add_X dst src =>
     simp [step_instr]
-    exact step.rule_add_X_32 pc h_fetch
-  | add_K_32 dst imm =>
+    exact step.rule_add_X pc h_fetch
+  | add_K dst imm =>
     simp [step_instr]
-    exact step.rule_add_K_32 pc h_fetch
-  | and_X_32 dst src =>
+    exact step.rule_add_K pc h_fetch
+  | and_X dst src =>
     simp [step_instr]
-    exact step.rule_and_X_32 pc h_fetch
-  | and_K_32 dst imm =>
+    exact step.rule_and_X pc h_fetch
+  | and_K dst imm =>
     simp [step_instr]
-    exact step.rule_and_K_32 pc h_fetch
-  | sth_X_32 src index =>
+    exact step.rule_and_K pc h_fetch
+  | sth_X src index =>
     simp [step_instr]
-    exact step.rule_sth_X_32 h_fetch
-  | sth_K_32 imm index =>
+    exact step.rule_sth_X h_fetch
+  | sth_K imm index =>
     simp [step_instr]
-    exact step.rule_sth_K_32 h_fetch
-  | ldh_X_32 dst src index =>
-    simp [step_instr]
-    split
-    · next h =>
-      simp
-      exact step.rule_ldh_X_32 h_fetch h
-    · next h =>
-      simp
-      exact step.rule_ldh_X_32_none h_fetch h
-  | ldxh_X_32 imm index =>
+    exact step.rule_sth_K h_fetch
+  | ldh_X dst src index =>
     simp [step_instr]
     split
     · next h =>
       simp
-      exact step.rule_ldxh_X_32 h_fetch h
+      exact step.rule_ldh_X h_fetch h
     · next h =>
       simp
-      exact step.rule_ldxh_X_32_none h_fetch h
-  | jgt_X_32 dst src offset =>
+      exact step.rule_ldh_X_none h_fetch h
+  | jgt_X dst src offset =>
     simp [step_instr]
     split
     ·
@@ -182,7 +168,7 @@ lemma exec_to_step {code : Code} {pc : PC} {s : MachineState} {instr : opCode}
       next h =>
         simp
         exact step.jgt_X_false h_fetch (Nat.le_of_not_lt h)
-  | jgt_K_32 dst src offset =>
+  | jgt_K dst src offset =>
     simp [step_instr]
     split
     ·
@@ -193,7 +179,7 @@ lemma exec_to_step {code : Code} {pc : PC} {s : MachineState} {instr : opCode}
       next h =>
         simp
         exact step.jgt_K_false h_fetch (Nat.le_of_not_lt h)
-  | jne_X_32 dst src offset =>
+  | jne_X dst src offset =>
     simp [step_instr]
     split
     ·
@@ -204,7 +190,7 @@ lemma exec_to_step {code : Code} {pc : PC} {s : MachineState} {instr : opCode}
       next h =>
         simp
         exact step.jne_X_true h_fetch h
-  | jne_K_32 dst imm offset =>
+  | jne_K dst imm offset =>
     simp [step_instr]
     split
     ·
@@ -215,7 +201,7 @@ lemma exec_to_step {code : Code} {pc : PC} {s : MachineState} {instr : opCode}
       next h =>
         simp
         exact step.jne_K_true h_fetch h
-  | jeq_X_32 dst src offset =>
+  | jeq_X dst src offset =>
     simp [step_instr]
     split
     ·
@@ -226,7 +212,7 @@ lemma exec_to_step {code : Code} {pc : PC} {s : MachineState} {instr : opCode}
       next h =>
         simp
         exact step.jeq_X_false h_fetch h
-  | jeq_K_32 dst imm offset =>
+  | jeq_K dst imm offset =>
     simp [step_instr]
     split
     ·
@@ -237,7 +223,7 @@ lemma exec_to_step {code : Code} {pc : PC} {s : MachineState} {instr : opCode}
       next h =>
         simp
         exact step.jeq_K_false h_fetch h
-  | jset_X_32 dst src offset =>
+  | jset_X dst src offset =>
     simp [step_instr]
     split
     ·
@@ -248,7 +234,7 @@ lemma exec_to_step {code : Code} {pc : PC} {s : MachineState} {instr : opCode}
       next h =>
         simp
         exact step.jset_X_true h_fetch h
-  | jset_K_32 dst src offset =>
+  | jset_K dst src offset =>
     simp [step_instr]
     split
     ·
@@ -260,12 +246,11 @@ lemma exec_to_step {code : Code} {pc : PC} {s : MachineState} {instr : opCode}
         simp
         exact step.jset_K_true h_fetch h
 
-theorem hoare_step_sound {prog : List opCode} {pc next_pc : PC} {P Q : Assert} {s next_s : MachineState}
+theorem hoare_step_sound {prog : List opCode} {pc next_pc : PC}
+  {P Q : Assert} {s next_s : MachineState}
   (h_triple : Triple P prog pc Q)
   (h_step : step prog pc s next_s)
-  --(h_next_pc : next_pc = ...) -- (Opcional, mas útil: extrair o cálculo do próximo PC)
-  (h_pre : P s) :
-  Q next_s := by
+  (h_pre : P s) : Q next_s := by
   -- A prova é conduzida por indução estrutural sobre a derivação da tripla de Hoare
   induction h_triple generalizing s next_s next_pc
   case consequence P P' Q Q' hP hcore hQ ih =>
@@ -287,17 +272,19 @@ theorem hoare_step_sound {prog : List opCode} {pc next_pc : PC} {P Q : Assert} {
     . sorry
     . sorry
 
-  case mov_K_32 pc' P dst imm hfetch =>
+  case mov_K pc' P dst imm hfetch =>
     cases h_step with
-    | rule_mov_K_32 pc s dst imm =>
-      exact h_pre
+    | rule_mov_K =>
+      sorry
+    | _ =>
+      sorry
 
-  case add_X_32 pc' P src dst hfetch =>
+  case add_X pc' P src dst hfetch =>
     cases h_step
-    case rule_add_X_32 _ _ _ _ =>
-      exact h_pre
+    case rule_add_X _ _ _ _ =>
+      sorry
 
-  case jgt_X_32_true pc' P dst src offset hfetch =>
+  case jgt_X_true pc' P dst src offset hfetch =>
     -- Nos pulos condicionais, a pré-condição carrega a conjunção do teste
     -- h_pre : s.(dst) > s.(src) ∧ P s
     cases h_step

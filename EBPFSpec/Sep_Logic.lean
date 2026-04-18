@@ -117,237 +117,237 @@ inductive Triple : Assert → List opCode → PC → Assert → Prop where
     (hfetch : prog.get? pc = some (opCode.exit)) :
          Triple Q prog pc Q
 
-  | mov_K_32 {prog : List opCode}
+  | mov_K {prog : List opCode}
     {pc : PC}
     {P : Assert}
     {dst : Reg}
     {imm : ℕ}
-    (hfetch : prog.get? pc = some (opCode.mov_K_32 dst imm)) :
+    (hfetch : prog.get? pc = some (opCode.mov_K dst imm)) :
     Triple (fun s => P ( s.[dst↦ imm ] )) prog pc P
 
-  | mov_X_32 {prog : List opCode}
+  | mov_X {prog : List opCode}
     {pc : PC}
     {P : Assert}
     {src dst : Reg}
-    (hfetch : prog.get? pc = some (opCode.mov_X_32 dst src)) :
+    (hfetch : prog.get? pc = some (opCode.mov_X dst src)) :
     Triple ( fun s' => P ( s'.[dst↦ s'.(src) ] )) prog pc P
 
-  | add_K_32 {prog : List opCode}
+  | add_K {prog : List opCode}
     {pc : PC}
     {P : Assert}
     { dst : Reg}
     { imm : ℕ }
-    (hfetch : prog.get? pc = some (opCode.add_K_32 dst imm)) :
+    (hfetch : prog.get? pc = some (opCode.add_K dst imm)) :
     Triple ( fun s' => P ( s'.[dst↦ ( s'.(dst) + imm )  ] )) prog pc P
 
-  | add_X_32 {prog : List opCode}
+  | add_X {prog : List opCode}
     {pc : PC}
     {P : Assert}
     {src dst : Reg}
-    (hfetch : prog.get? pc = some (opCode.add_X_32 dst src)) :
+    (hfetch : prog.get? pc = some (opCode.add_X dst src)) :
     Triple ( fun s' => P ( s'.[dst↦ ( s'.(dst) + s'.(src) )  ] )) prog pc P
 
-  | and_K_32 {prog : List opCode}
+  | and_K {prog : List opCode}
     {pc : PC}
     {P : Assert}
     { dst : Reg}
     { imm : ℕ }
-    (hfetch : prog.get? pc = some (opCode.and_K_32 dst imm)) :
+    (hfetch : prog.get? pc = some (opCode.and_K dst imm)) :
     Triple ( fun s' => P ( s'.[dst↦ ( s'.(dst) &&& imm )  ] )) prog pc P
 
-  | and_X_32 {prog : List opCode}
+  | and_X {prog : List opCode}
     {pc : PC}
     {P : Assert}
     {src dst : Reg}
-    (hfetch : prog.get? pc = some (opCode.and_X_32 dst src)) :
+    (hfetch : prog.get? pc = some (opCode.and_X dst src)) :
     Triple ( fun s' => P ( s'.[dst↦ ( s'.(dst) &&& s'.(src) )  ] )) prog pc P
 
-  /-| ldh_K_32 {prog : List opCode}
+  /-| ldh_K {prog : List opCode}
     {pc : ℕ}
     {P : Assert}
     {imm index : ℕ }
-    (hfetch : prog.get? pc = some (opCode.ldh_K_32 imm index)) :
+    (hfetch : prog.get? pc = some (opCode.ldh_K imm index)) :
     Triple (fun s => ∃ val, s.mem (s.regs addr) = some val ∧
                           P (State.updateReg s dst val)) prog pc P
 -/
-  | ldh_X_32 {prog : List opCode}
+  | ldh_X {prog : List opCode}
     {pc : ℕ}
     {P : Assert}
     {index : ℕ }
     {dst : Reg}
-    (hfetch : prog.get? pc = some (opCode.ldh_X_32 dst src index)) :
+    (hfetch : prog.get? pc = some (opCode.ldh_X dst src index)) :
     Triple (fun s => ∃ val, s.[index + s.(src)] = some val ∧
                           P ( s.[dst ↦ val] )) prog pc P
-
-  | ldxh_X_32 {prog : List opCode}
+/-
+  | ldxh_X {prog : List opCode}
     {pc : ℕ}
     {P : Assert}
     {index : ℕ }
     {dst : Reg}
-    (hfetch : prog.get? pc = some (opCode.ldxh_X_32 dst index)) :
+    (hfetch : prog.get? pc = some (opCode.ldxh_X dst index)) :
     Triple (fun s => ∃ val, s.[index] = some val ∧
                           P ( s.[dst ↦ val] )) prog pc P
-
-  | sth_X_32 {prog : List opCode}
+-/
+  | sth_X {prog : List opCode}
     {pc : ℕ}
     {P : Assert}
     {index : ℕ }
     {src : Reg}
-    (hfetch : prog.get? pc = some (opCode.sth_X_32 src index)) :
+    (hfetch : prog.get? pc = some (opCode.sth_X src index)) :
     Triple (fun s => --∃ old, s.[index] = some old ∧
                           P ( s.[index]:= s.(src) )) prog pc P
 
-  | sth_K_32 {prog : List opCode}
+  | sth_K {prog : List opCode}
     {pc : ℕ}
     {P : Assert}
     {index imm : ℕ }
-    (hfetch : prog.get? pc = some (opCode.sth_K_32 imm index)) :
+    (hfetch : prog.get? pc = some (opCode.sth_K imm index)) :
     Triple (fun s => --∃ old i, (s.[index]:= s.(src)).[i] = some old ∧
                           P ( s.[index]:= imm )) prog pc P
 
-  | jne_X_32_true {prog : List opCode}
+  | jne_X_true {prog : List opCode}
       {pc : ℕ}
       {P : Assert}
       {dst src : Reg}
       {offset : ℕ}
-      (hfetch : prog.get? pc = some (opCode.jne_X_32 dst src offset)) :
+      (hfetch : prog.get? pc = some (opCode.jne_X dst src offset)) :
       Triple (fun s => s.(dst) ≠ s.(src) ∧ P s) prog pc P
-      --Triple (fun s => evalJMP s (opCode.jne_X_32 dst src offset) ∧ P s) prog pc P
+      --Triple (fun s => evalJMP s (opCode.jne_X dst src offset) ∧ P s) prog pc P
 
-  | jne_X_32_false {prog : List opCode}
+  | jne_X_false {prog : List opCode}
       {pc : ℕ}
       {P : Assert}
       {dst src : Reg}
       {offset : ℕ}
-      (hfetch : prog.get? pc = some (opCode.jne_X_32 dst src offset)) :
+      (hfetch : prog.get? pc = some (opCode.jne_X dst src offset)) :
       Triple (fun s => s.(dst) = s.(src) ∧ P s) prog pc P
-      --Triple (fun s => evalJMP s (opCode.jne_X_32 dst src offset) ∧ P s) prog pc P
+      --Triple (fun s => evalJMP s (opCode.jne_X dst src offset) ∧ P s) prog pc P
 
-  | jne_K_32_true {prog : List opCode}
+  | jne_K_true {prog : List opCode}
       {pc : ℕ}
       {P : Assert}
       {dst : Reg}
       {imm offset : ℕ}
-      (hfetch : prog.get? pc = some (opCode.jne_K_32 dst imm offset)) :
+      (hfetch : prog.get? pc = some (opCode.jne_K dst imm offset)) :
       Triple (fun s => s.(dst) ≠ imm ∧ P s) prog pc P
-      --Triple (fun s => evalJMP s (opCode.jne_K_32 dst imm offset) ∧ P s) prog pc P
+      --Triple (fun s => evalJMP s (opCode.jne_K dst imm offset) ∧ P s) prog pc P
 
-  | jne_K_32_false {prog : List opCode}
+  | jne_K_false {prog : List opCode}
       {pc : ℕ}
       {P : Assert}
       {dst : Reg}
       {imm offset : ℕ}
-      (hfetch : prog.get? pc = some (opCode.jne_K_32 dst imm offset)) :
+      (hfetch : prog.get? pc = some (opCode.jne_K dst imm offset)) :
       Triple (fun s => s.(dst) = imm ∧ P s) prog pc P
-      --Triple (fun s => evalJMP s (opCode.jne_K_32 dst imm offset) ∧ P s) prog pc P
+      --Triple (fun s => evalJMP s (opCode.jne_K dst imm offset) ∧ P s) prog pc P
 
-  | jeq_X_32_true {prog : List opCode}
+  | jeq_X_true {prog : List opCode}
       {pc : ℕ}
       {P : Assert}
       {dst src : Reg}
       {offset : ℕ}
-      (hfetch : prog.get? pc = some (opCode.jeq_X_32 dst src offset)) :
+      (hfetch : prog.get? pc = some (opCode.jeq_X dst src offset)) :
       Triple (fun s => s.(dst) = s.(src) ∧ P s) prog pc P
-      --Triple (fun s => evalJMP s (opCode.jne_X_32 dst src offset) ∧ P s) prog pc P
+      --Triple (fun s => evalJMP s (opCode.jne_X dst src offset) ∧ P s) prog pc P
 
-  | jeq_X_32_false {prog : List opCode}
+  | jeq_X_false {prog : List opCode}
       {pc : ℕ}
       {P : Assert}
       {dst src : Reg}
       {offset : ℕ}
-      (hfetch : prog.get? pc = some (opCode.jeq_X_32 dst src offset)) :
+      (hfetch : prog.get? pc = some (opCode.jeq_X dst src offset)) :
       Triple (fun s => s.(dst) ≠ s.(src) ∧ P s) prog pc P
-      --Triple (fun s => evalJMP s (opCode.jne_X_32 dst src offset) ∧ P s) prog pc P
+      --Triple (fun s => evalJMP s (opCode.jne_X dst src offset) ∧ P s) prog pc P
 
-  | jeq_K_32_true {prog : List opCode}
+  | jeq_K_true {prog : List opCode}
       {pc : ℕ}
       {P : Assert}
       {dst : Reg}
       {imm offset : ℕ}
-      (hfetch : prog.get? pc = some (opCode.jeq_K_32 dst imm offset)) :
+      (hfetch : prog.get? pc = some (opCode.jeq_K dst imm offset)) :
       Triple (fun s => s.(dst) = imm ∧ P s) prog pc P
-      --Triple (fun s => evalJMP s (opCode.jne_K_32 dst imm offset) ∧ P s) prog pc P
+      --Triple (fun s => evalJMP s (opCode.jne_K dst imm offset) ∧ P s) prog pc P
 
-  | jeq_K_32_false {prog : List opCode}
+  | jeq_K_false {prog : List opCode}
       {pc : ℕ}
       {P : Assert}
       {dst : Reg}
       {imm offset : ℕ}
-      (hfetch : prog.get? pc = some (opCode.jeq_K_32 dst imm offset)) :
+      (hfetch : prog.get? pc = some (opCode.jeq_K dst imm offset)) :
       Triple (fun s => s.(dst) ≠ imm ∧ P s) prog pc P
-      --Triple (fun s => evalJMP s (opCode.jne_K_32 dst imm offset) ∧ P s) prog pc P
+      --Triple (fun s => evalJMP s (opCode.jne_K dst imm offset) ∧ P s) prog pc P
 
-  | jset_X_32_true {prog : List opCode}
+  | jset_X_true {prog : List opCode}
       {pc : ℕ}
       {P : Assert}
       {dst src : Reg}
       {offset : ℕ}
-      (hfetch : prog.get? pc = some (opCode.jset_X_32 dst src offset)) :
+      (hfetch : prog.get? pc = some (opCode.jset_X dst src offset)) :
       Triple (fun s => (s.(dst) &&& s.(src) ≠ 0) ∧ P s) prog pc P
-      --Triple (fun s => evalJMP s (opCode.jne_X_32 dst src offset) ∧ P s) prog pc P
+      --Triple (fun s => evalJMP s (opCode.jne_X dst src offset) ∧ P s) prog pc P
 
-  | jset_X_32_false {prog : List opCode}
+  | jset_X_false {prog : List opCode}
       {pc : ℕ}
       {P : Assert}
       {dst src : Reg}
       {offset : ℕ}
-      (hfetch : prog.get? pc = some (opCode.jset_X_32 dst src offset)) :
+      (hfetch : prog.get? pc = some (opCode.jset_X dst src offset)) :
       Triple (fun s => (s.(dst) &&& s.(src) = 0) ∧ P s) prog pc P
-      --Triple (fun s => evalJMP s (opCode.jne_X_32 dst src offset) ∧ P s) prog pc P
+      --Triple (fun s => evalJMP s (opCode.jne_X dst src offset) ∧ P s) prog pc P
 
-  | jset_K_32_true {prog : List opCode}
+  | jset_K_true {prog : List opCode}
       {pc : ℕ}
       {P : Assert}
       {dst : Reg}
       {imm offset : ℕ}
-      (hfetch : prog.get? pc = some (opCode.jset_K_32 dst imm offset)) :
+      (hfetch : prog.get? pc = some (opCode.jset_K dst imm offset)) :
       Triple (fun s => (s.(dst) &&& imm ≠ 0) ∧ P s) prog pc P
-      --Triple (fun s => evalJMP s (opCode.jne_K_32 dst imm offset) ∧ P s) prog pc P
+      --Triple (fun s => evalJMP s (opCode.jne_K dst imm offset) ∧ P s) prog pc P
 
-  | jset_K_32_false {prog : List opCode}
+  | jset_K_false {prog : List opCode}
       {pc : ℕ}
       {P : Assert}
       {dst : Reg}
       {imm offset : ℕ}
-      (hfetch : prog.get? pc = some (opCode.jset_K_32 dst imm offset)) :
+      (hfetch : prog.get? pc = some (opCode.jset_K dst imm offset)) :
       Triple (fun s => (s.(dst) &&& imm = 0) ∧ P s) prog pc P
-      --Triple (fun s => evalJMP s (opCode.jne_K_32 dst imm offset) ∧ P s) prog pc P
+      --Triple (fun s => evalJMP s (opCode.jne_K dst imm offset) ∧ P s) prog pc P
 
-  | jgt_X_32_true {prog : List opCode}
+  | jgt_X_true {prog : List opCode}
       {pc : ℕ}
       {P : Assert}
       {dst src : Reg}
       {offset : ℕ}
-      (hfetch : prog.get? pc = some (opCode.jgt_X_32 dst src offset)) :
+      (hfetch : prog.get? pc = some (opCode.jgt_X dst src offset)) :
       Triple (fun s => s.(dst) > s.(src) ∧ P s) prog pc P
-      --Triple (fun s => evalJMP s (opCode.jgt_X_32 dst src offset) = true ∧ P s) prog pc P
+      --Triple (fun s => evalJMP s (opCode.jgt_X dst src offset) = true ∧ P s) prog pc P
 
-  | jgt_X_32_false {prog : List opCode}
+  | jgt_X_false {prog : List opCode}
       {pc : ℕ}
       {P : Assert}
       {dst src : Reg}
       {offset : ℕ}
-      (hfetch : prog.get? pc = some (opCode.jgt_X_32 dst src offset)) :
+      (hfetch : prog.get? pc = some (opCode.jgt_X dst src offset)) :
       Triple (fun s => s.(dst) ≤ s.(src) ∧ P s) prog pc P
-      --Triple (fun s => evalJMP s (opCode.jgt_X_32 dst src offset) = false ∧ P s) prog pc P
+      --Triple (fun s => evalJMP s (opCode.jgt_X dst src offset) = false ∧ P s) prog pc P
 
-  | jgt_K_32_true {prog : List opCode}
+  | jgt_K_true {prog : List opCode}
       {pc : ℕ}
       {P : Assert}
       {dst : Reg}
       {imm offset : ℕ}
-      (hfetch : prog.get? pc = some (opCode.jgt_K_32 dst imm offset)) :
+      (hfetch : prog.get? pc = some (opCode.jgt_K dst imm offset)) :
       Triple (fun s => s.(dst) > imm ∧ P s) prog pc P
-      --Triple (fun s => evalJMP s (opCode.jgt_K_32 dst imm offset) ∧ P s) prog pc P
+      --Triple (fun s => evalJMP s (opCode.jgt_K dst imm offset) ∧ P s) prog pc P
 
-  | jgt_K_32_false {prog : List opCode}
+  | jgt_K_false {prog : List opCode}
       {pc : ℕ}
       {P : Assert}
       {dst : Reg}
       {imm offset : ℕ}
-      (hfetch : prog.get? pc = some (opCode.jgt_K_32 dst imm offset)) :
+      (hfetch : prog.get? pc = some (opCode.jgt_K dst imm offset)) :
       Triple (fun s => s.(dst) ≤ imm ∧ P s) prog pc P
-      --Triple (fun s => evalJMP s (opCode.jgt_K_32 dst imm offset) ∧ P s) prog pc P
+      --Triple (fun s => evalJMP s (opCode.jgt_K dst imm offset) ∧ P s) prog pc P
 
   | halt {prog : List opCode}
        {pc : ℕ}
