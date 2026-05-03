@@ -1,79 +1,83 @@
-# Documentação Técnica: Formalização da Semântica eBPF e Verificação de Programas em Lean 4
+# Documentação Técnica: Formalização e Verificação do eBPF em Lean 4
 
-## 1. Introdução
+## 1. Introdução e Visão Geral
+Este projeto apresenta uma formalização completa e rigorosa da semântica da eBPF (*Extended Berkeley Packet Filter*) utilizando o assistente de provas Lean 4. O objetivo é fornecer uma base matemática para a verificação formal de programas eBPF, garantindo propriedades de segurança e correção funcional através de Lógica de Hoare e Lógica de Separação.
 
-Este documento apresenta a formalização da semântica da máquina virtual eBPF (Extended Berkeley Packet Filter) utilizando o assistente de provas Lean 4. O projeto estabelece uma base rigorosa para a verificação formal de programas eBPF, definindo o estado da máquina, o conjunto de instruções, a semântica operacional (*small-step*), e um interpretador executável. Adicionalmente, constrói-se um arcabouço de Lógica de Separação e Lógica de Hoare, culminando em um Gerador de Condições de Verificação (VCG) provado correto (*sound*) para garantir propriedades de segurança em filtros de rede.
-
----
-
-## 2. Estado de Máquina e Memória
-
-[cite_start]O estado da máquina eBPF é formalizado como o produto cartesiano entre o estado dos registradores e o estado da pilha[cite: 276]. 
-
-* [cite_start]**Registradores (`RegsState`)**: A máquina possui 11 registradores enumerados de $r0$ a $r10$, além de um registrador auxiliar $r\_$[cite: 273, 274]. [cite_start]O estado dos registradores é modelado como uma função total mapeando registradores para números naturais ($Reg \to \mathbb{N}$)[cite: 274].
-* **Pilha (`StackState`)**: A memória de pilha possui tamanho fixo de 512 bytes. [cite_start]É modelada como uma função de índices finitos para opções de valores naturais ($Fin\ 512 \to Option\ \mathbb{N}$)[cite: 275].
-* [cite_start]**Estado Global (`MachineState`)**: Definido pela tupla $(RegsState \times StackState)$[cite: 276]. [cite_start]Operadores de leitura e escrita explícitos foram formalizados, permitindo a sintaxe abstraída via macros matemáticas, como $s.[index]$ para leitura e $s.[dst \mapsto val]$ para atualização[cite: 283].
+A arquitetura do projeto divide-se em:
+- **Modelo de Dados**: Definição de estados, registradores e memória.
+- **Semântica Operacional**: Regras de transição de pequenos passos (*small-step*) e execução.
+- **Interpretador**: Uma implementação executável para simulação.
+- **Lógica de Verificação**: Implementação de tríplices de Hoare e um Gerador de Condições de Verificação (VCG).
+- **Provas de Soundness**: Demonstração de que o VCG e a lógica de Hoare respeitam a semântica operacional.
 
 ---
 
-## 3. Conjunto de Instruções e Sintaxe
+## 2. Arquitetura da Máquina e Memória (`A_Memory.lean`)
+O estado da máquina (`MachineState`) é composto por dois elementos principais:
+- **Registradores (`RegsState`)**: Uma função `Reg → ℕ` que mapeia os registradores `r0` a `r10` para valores naturais. O registrador `r_` é tratado como um registrador nulo (sempre retorna 0).
+- **Pilha (`StackState`)**: Uma memória de 512 bytes modelada como `Fin 512 → Option ℕ`. O uso de `Option` permite representar células de memória não inicializadas.
 
-[cite_start]A sintaxe abstrata dos programas eBPF é definida de forma algébrica por meio do tipo indutivo `opCode`[cite: 285]. 
-
-* [cite_start]**Aritmética e Lógica**: Operações suportadas incluem adições e conjunções bit a bit, parametrizadas tanto por valores imediatos (ex: `add_K`, `and_K`) quanto por registradores (ex: `add_X`, `and_X`)[cite: 285, 286, 287].
-* **Controle de Fluxo**: Instruções de salto condicional avaliam relações de desigualdade (`jgt`), diferença (`jne`), igualdade (`jeq`) e máscara de bits (`jset`). [cite_start]Elas calculam o deslocamento (*offset*) relativo ao Program Counter ($PC$)[cite: 288, 289, 290, 291].
-* **Memória e Encerramento**: A manipulação de memória é efetuada por instruções de carregamento dinâmico (`ldh_X`) e armazenamento estático/dinâmico (`sth_K`, `sth_X`). [cite_start]A instrução terminal é designada por `exit`[cite: 296, 297, 298].
-* [cite_start]Um programa (`Code`) é estruturado como uma sequência encadeada (`List opCode`)[cite: 298].
-
----
-
-## 4. Semântica Operacional
-
-A execução de instruções é regida por uma semântica de passos pequenos (*small-step semantics*), formalizada pelo predicado indutivo `step`. [cite_start]Esta relação define as transições de estado $step(code, pc, next\_pc, s, next\_s)$[cite: 299].
-
-* **Regras de Transição**: Para cada construtor em `opCode`, há axiomas correspondentes. [cite_start]Por exemplo, `rule_add_X` define a semântica da adição entre registradores, atualizando o destino e incrementando o $PC$[cite: 306, 307].
-* [cite_start]**Ramificação**: Os saltos bifurcam a prova em dois construtores mutuamente excludentes (ex: `jgt_X_true` e `jgt_X_false`), dependendo da avaliação da guarda condicional no estado atual[cite: 322, 324].
-* [cite_start]**Fecho Transitivo**: O predicado `run` captura a execução iterada de múltiplos passos, compondo transições elementares de modo indutivo através da construtores `halt` e `seq`[cite: 354, 355, 356].
+As operações de leitura e escrita são abstraídas por macros:
+- `s.(r)`: Leitura do registrador `r`.
+- `s.[dst ↦ val]`: Atualização do registrador `dst`.
+- `s.[idx]`: Leitura da pilha na posição `idx`.
+- `s.[idx] := val`: Escrita na pilha.
 
 ---
 
-## 5. Interpretador Executável
-
-[cite_start]Em paralelo à semântica relacional, fornece-se uma especificação computável por meio de um interpretador[cite: 414].
-
-* [cite_start]**Avaliação Passo-a-Passo (`step_instr`)**: Uma função pura computa o próximo estado da máquina e o incremento escalar do $PC$ com base na instrução corrente[cite: 396]. 
-* **Controle de Terminação (`fuel`)**: Dado o problema da parada, a função `interp` incorpora um contador de combustível ($fuel$) para forçar a terminação de eventuais laços infinitos, retornando `Option MachineState`[cite: 414, 415].
-* [cite_start]**Teorema de Correspondência**: O lema `step_instr_to_step` (estabelecido no módulo de correção) formaliza que o comportamento determinístico de `step_instr` reflete rigorosamente a relação axiomatizada em `step`[cite: 1, 2, 3].
-
----
-
-## 6. Lógica de Separação e Sistema de Tipos de Hoare
-
-A metodologia primária de prova requerida para validar a segurança da memória e a ausência de vazamentos é suportada por Lógica de Separação.
-
-* [cite_start]**Asserções Espaciais (`Assert`)**: Mapeiam o estado da máquina para proposições lógicas ($MachineState \to Prop$)[cite: 360].
-* **Conectivos**: A Lógica de Separação introduz o modelo de "separação" de pilhas via predicados como o *Separating Conjunction* ($P * Q$) e o *Magic Wand* ($P -* Q$), requerendo o particionamento do subespaço da memória via `State_disjoint` e `State_union`[cite: 360, 361].
-* **Lógica de Hoare (`Triple`)**: As tríplices de Hoare ($\{P\} \ prog \ @\ pc \ \{Q\}$) asseguram a consistência pós-execução. [cite_start]Inferências como `consequence` (fortalecimento de premissa e enfraquecimento de conclusão) e `frame` (extensão local de estado imutável) formam o alicerce matemático[cite: 364, 365]. [cite_start]As regras específicas, tais como `jne_X_true`, integram as bifurcações das lógicas condicionais no ambiente lógico[cite: 379].
+## 3. Conjunto de Instruções (`B_Instructions.lean`)
+As instruções eBPF são definidas no tipo indutivo `opCode`. O conjunto suportado inclui:
+- **Aritmética**: `add_K` (imediato), `add_X` (registrador), `and_K`, `and_X`.
+- **Movimentação**: `mov_K`, `mov_X`.
+- **Saltos Condicionais**: `jgt` (maior que), `jne` (diferente), `jeq` (igual), `jset` (bitmask).
+- **Memória**: `ldh_X` (load half-word), `sth_K` (store imediato), `sth_X` (store registrador).
+- **Controle**: `exit` para encerrar a execução.
 
 ---
 
-## 7. Geração de Condições de Verificação (VCG)
-
-O VCG é responsável por automatizar parcialmente o processo de construção de provas lógicas, transformando as instruções do código em fórmulas de primeira ordem.
-
-* **Pré-Condição Mais Fraca (`wp`)**: Transforma inversamente o estado pós-execução. Em operações condicionais (`jgt`, `jne`), ramifica as premissas em proposições conjuntivas baseadas no salto (`Q_jump`) ou queda (`Q_next`)[cite: 20, 27].
-* [cite_start]**Tratamento de Laços (`InvMap`)**: O mapeamento `inv` acomoda variantes lógicas e invariantes essenciais na resolução contínua do $PC$, contornando limites recursivos[cite: 39, 43].
-* **Teoremas de Solidez (*Soundness*)**:
-    * [cite_start]`wp_sound`: Garante que a Pré-Condição Mais Fraca gera uma tríplice de Hoare válida perante os saltos e transições estruturais[cite: 88, 97].
-    * [cite_start]`vcg_sound`: O teorema principal estabelece formalmente que se um bloco for validado perante suas condições laterais (via gerador de VCG parametrizado por limites recursivos), a sua execução sob a pré-condição declarada atinge de fato o seu objetivo sem refutações operacionais[cite: 201, 202].
-    * [cite_start]`hoare_step_sound`: Demostra a compatibilidade em uma única transição de instrução perante mutação de estado isolada (`step_locality`)[cite: 203, 204].
+## 4. Semântica Operacional (`C_Semantic_Step.lean`)
+A semântica é definida através de relações indutivas:
+- **`step`**: Define a transição de um único passo entre estados (`PC → PC → MachineState → MachineState`). Cada instrução possui uma regra específica (ex: `rule_mov_X`, `rule_ldh_X`).
+- **`run`**: O fecho transitivo da relação `step`. Define quando um programa termina (`halt`) ou continua (`seq`).
+- **`runV2`**: Uma variante de execução simplificada para provas de composição.
 
 ---
 
-## 8. Aplicações e Casos de Estudo
+## 5. Interpretador e Simulação (`E_Interpreter.lean`)
+O arquivo `E_Interpreter.lean` fornece uma versão computável da semântica:
+- **`step_instr`**: Uma função que recebe uma instrução e o estado atual, retornando o novo estado e o deslocamento do Program Counter.
+- **`interp`**: Função recursiva que executa o código. Utiliza um parâmetro `fuel` (combustível) para garantir a terminação em Lean, permitindo a execução de programas eBPF em tempo de compilação ou via `#eval`.
 
-Para validar a integridade semântica da abstração, programas focados no modelo de filtragem de pacotes clássico foram definidos e formalmente provados corretos usando as táticas customizadas de VCG.
+---
 
-* [cite_start]**Filtro ARP Limitado (`prog_only_arp`)**: Comprova formalmente o aceite lógico exclusivamente de pacotes marcados com *ethertype* ARP ($0x0806$), setando a flag $r0 = 1$ para tráfego válido e dropando conexões espúrias[cite: 247, 248].
-* **Identificação de Tráfego de Sub-rede (`prog_subnet`)**: O sistema foi atestado frente ao parse e aritmética bit a bit para descarte de acessos fora do intervalo de máscara exigido, assegurando isolamento do *payload* provido nas pilhas de índices arbitrários[cite: 258, 259, 260].
-* **Filtro IPv4 TCP SSH (`prog_only_IPv4_TCP_SSH`)**: Um modelo complexo garantindo que *headers* IP validam precisamente a correspondência para porta SSH ($0x16$), verificando bytes disjuntos sequenciais e submetendo a demonstração pelas rotinas sintáticas do `vcg_sound`[cite: 264, 267, 268].
+## 6. Lógica de Hoare e Separação (`D_Sep_Logic.lean`)
+Para provar propriedades de programas, o projeto implementa uma lógica de prova baseada em asserções (`Assert`):
+- **Conectivos de Separação**: `P ∗ Q` (conjunção separadora) e `P -∗ Q` (magic wand) permitem raciocinar sobre partes disjuntas da memória.
+- **Tríplices de Hoare (`Triple`)**: A estrutura `⦃P⦄ prog @ pc ⦃Q⦄` afirma que, se a pré-condição `P` for satisfeita, a execução do programa a partir de `pc` resultará num estado que satisfaz a pós-condição `Q`.
+- **Regras de Inferência**: Inclui regras para todas as instruções eBPF, além de regras estruturais como `consequence`, `frame` e `disj`.
+
+---
+
+## 7. Geração de Condições de Verificação (`G_Ver_Cond_Gen.lean`)
+O VCG automatiza a criação de provas:
+- **`wp` (Weakest Precondition)**: Calcula a pré-condição mais fraca para uma única instrução. Para saltos, a função gera condições que cobrem tanto o caminho do salto quanto o caminho sequencial.
+- **`vcg`**: Função recursiva que percorre o código (usando `fuel`) e gera uma estrutura `VCGResult` contendo a pré-condição calculada e uma lista de condições de verificação (VCs - obrigações de prova).
+- **`inv` (Invariants)**: Suporta o uso de mapas de invariantes para lidar com laços ou saltos complexos.
+
+---
+
+## 8. Provas de Soundness
+As provas de correção garantem que a lógica de alto nível é fiel à semântica operacional:
+- **`step_instr_to_step` (`F_Step_Interp_Sound.lean`)**: Prova que um passo do interpretador corresponde a um passo na relação `step`.
+- **`wp_sound` e `vcg_sound` (`H_Ver_Cond_Gen_Sound.lean`)**: Teoremas fundamentais que provam que se as condições geradas pelo VCG forem verdadeiras, então a tríplice de Hoare correspondente é válida.
+- **`hoare_step_sound` (`I_Hoare_Step_Sound.lean`)**: Prova que a validade de uma tríplice é preservada através de um passo de execução.
+- **`hoare_run_sound` (`J_Run_Sound.lean`)**: Prova que a validade de uma tríplice implica que a pós-condição será satisfeita no final da execução de um programa completo.
+
+---
+
+## 9. Exemplos e Verificação de Programas (`K_Programs.lean`)
+Este módulo demonstra a aplicação prática da ferramenta em filtros eBPF reais:
+- **`test_add`**: Verificação de somas simples em registradores.
+- **`prog_only_arp`**: Um filtro que permite apenas pacotes ARP ($0x0806$), verificando o campo do protocolo no cabeçalho Ethernet.
+- **`prog_subnet`**: Verifica se um pacote pertence a uma sub-rede específica através de operações de máscara de bits (`and_K`) e saltos.
+- **`prog_only_IPv4_TCP_SSH`**: Um filtro complexo que valida múltiplos campos (EtherType, Protocolo IP e Porta TCP 22), demonstrando o poder do VCG em lidar com lógica de ramificação densa.
