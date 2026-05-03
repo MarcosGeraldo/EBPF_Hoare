@@ -1,0 +1,652 @@
+\documentclass[sigconf]{acmart}
+
+%% Using the option "anonymous" will produce "Anonymous Author(s)"
+%% for double-anonymized review. Upon acceptance, remove this option
+%% and set the authors' names and affiliations using the corresponding
+%% commands.
+%\usepackage{amssymb}
+\usepackage[english]{babel}  % Se seu texto for em inglês
+
+\usepackage{proof}
+\usepackage{url}
+\usepackage{amsmath}
+%% CBSoft uses an ACM-like format without the ACM Reference block.
+%% The following warning from acmart can be safely ignored:
+%% "ACM reference format is mandatory for papers over one page."
+\settopmatter{printacmref=false}
+\renewcommand\footnotetextcopyrightpermission[1]{} % removes footnote with conference information in first column
+
+%% CBSoft uses an ACM-like format without a copyright note.
+\setcopyright{none}
+
+%% These commands are for a PROCEEDINGS abstract or paper.
+\acmConference[SBES 2026]{40th Brazilian Symposium on Software Engineering}{September 8–12, 2026}{São Paulo, SP, Brazil}
+
+% CBSoft uses an ACM-like format without CCS Concepts.
+% The following warning from acmart can be safely ignored:
+% "CCS concepts are mandatory for papers over two pages."
+
+%% \BibTeX command to typeset BibTeX logo in the docs
+\AtBeginDocument{
+    \providecommand\BibTeX{{Bib\TeX}}
+}
+
+%% Only for papers written in PORTUGUESE: 
+%% comment out the following three lines
+%\renewcommand\abstractname{Resumo}
+%\renewcommand\keywordsname{Palavras-chave}
+%\renewcommand\refname{Referências}
+
+%% end of the preamble, start of the body of the document source.
+
+
+% ------------------------------------------------------------
+% Authors: please make sure to read the checklist comments
+% provided at the end of this document before submission.
+% ------------------------------------------------------------
+\begin{document}
+
+%% The "title" command has an optional parameter,
+%% allowing the author to define a "short title" to be used on the page 
+%% headers.
+\title{Towards an Formal Specification for EBPF using Floyd-Hoare logic}
+
+%% The "author" command and its associated commands are used to define
+%% the authors and their affiliations.
+%% Of note is the shared affiliation of the first two authors, and the
+%% "authornote" and "authornotemark" commands
+%% used to denote shared contribution to the research.
+\author{Marcos Geraldo Braga Emiliano}
+\email{marcos.emiliano@aluno.ufop.edu.br}
+\affiliation{%
+  \institution{Prog. de Pós-Graduação em Ciência da Computação, Universidade Federal de Ouro Preto}
+  %\streetaddress{P.O. Box 1212}
+  \city{Ouro Preto}
+  \state{Minas Gerais}
+  \country{Brazil}
+  %\postcode{43017-6221}
+}
+\author{Elton Máximo Cardoso}
+\email{elton.cardoso@aluno.ufop.edu.br}
+\affiliation{%
+  \institution{Universidade Federal de Ouro Preto}
+  %\streetaddress{P.O. Box 1212}
+  \city{Ouro Preto}
+  \state{Minas Gerais}
+  \country{Brazil}
+  %\postcode{43017-6221}
+}
+\author{Rodrigo Ribeiro}
+\email{rodrigo.ribeiro@ufop.edu.br}
+\affiliation{%
+  \institution{Prog. de Pós-Graduação em Ciência da Computação, Universidade Federal de Ouro Preto}
+  %\streetaddress{P.O. Box 1212}
+  \city{Ouro Preto}
+  \state{Minas Gerais}
+  \country{Brazil}
+  %\postcode{43017-6221}
+}
+
+
+%% By default, the full list of authors will be used on the page
+%% headers. This list is often too long and will overlap
+%% other information printed in the page headers. 
+%% This command allows the author to define a more concise list
+%% of authors' names for this purpose.
+\renewcommand{\shortauthors}{Emiliano et al.}
+\renewcommand{\shorttitle}{Formal Specification of EBPF using Hoare}
+
+%% The abstract is a short summary of the work the paper presents.
+\begin{abstract}
+Extended Berkeley Packet Filter (eBPF) is a Linux-based technology
+which allows the safe execution untrusted user-defined extensions 
+inside the kernel. It is definied as a simple virtual machine which is 
+specified as a text document in the Linux kernel documentation. Such 
+informal specification approach poses problems to developers that want
+to create new compilers and static analysis tools for such application domain.
+This work presents the formal semantics of a large subset of eBPF as 
+a definitional interpreter in Lean 4 proof assistant and validates it 
+against a community built conformance test suite and uses it to apply property
+based testing to some example eBPF programs.
+\end{abstract}
+
+\keywords{eBPF, Linux kernel, Formal Semantics, Property-based Testing.}
+
+%% This command processes the author, affiliation, and title
+%% information and builds the first part of the formatted document.
+%% "frenchspacing" avoids an additional space after a period at the end of a sentence.
+\frenchspacing
+\maketitle
+
+
+\section{Introduction} % 1 Page
+
+% Importancia/relevancia do eBPF
+Today, we face an ever growing demand for high-speed internet traffic that poses challenges for faster network data processing. 
+In recent years, several proposals have been made to allow custom network processing, such as SDN~\cite{Feamster14}, NFV~\cite{Mijumbi2016} and languages such as POF~\cite{Song13} and P4~\cite{Bosshart2014}. 
+In particular, eBPF, which has been part of the Linux kernel since 2014~\cite{santos2019fast} has been used with great success to define load balancing and network monitoring tools by companies such as Facebook~\cite{Katran} and Cloudfare~\cite{bertin2017}.  
+
+% Problema a ser tratado 
+Currently, eBPF is defined by a text document present in the Linux kernel repository~\cite{schulist2025bpf}, which uses prose and some pseudo-code notation to describe the semantics of each eBPF instruction and the components of the virtual machine state. 
+Such an informal description poses a problem for compilers and static analysis algorithm developers since imprecise notation can have unintended ambiguities which can result in tools that do not conform with the eBPF semantics. 
+This lack of formal specification of programming languages has been considered a central problem by the research community~\cite{Aydemir08}, since pen and paper definitions using ordinary mathematics can result in errors that are hard to spot.
+
+%Solução utilizada pelo trabalho
+%Falar o que é Hoare
+Hoare Logic\cite{hoare1969axiomatic}, also known as axiomatic semantics, is a way of representing the semantics of a programming language. Through a series of derivation rules—which, in this work, correspond to eBPF instructions— it defines transitions from a given pre-condition to a resulting post-condition. This framework enables the mechanical deduction of correctness formulas, making it possible to verify eBPF programs by formally validating the state changes obtained during execution.
+
+%Falar o que é logica de separaçãow
+However, since eBPF relies on a stack and registers, and must strictly manage pointers and map access, formal tools are required to reason about and prove properties of these data structures. A powerful approach to achieve this is through Separation Logic \cite{pym2019separation} \cite{o2001local}, which provides a set of operators specifically designed for memory reasoning. A key example is the Frame Rule, which enables to prove that accessing a specific stack location does not corrupt others. This methodology allows for local reasoning, focusing exclusively on the memory footprints affected by an operation rather than the entire state.
+
+%Falar agora como utilizar Hoare+Separação permite a formalização de eBPF
+
+Finally, by leveraging Hoare logic to define the language's derivation rules and Separation Logic to enable the isolated analysis of memory cells, the combination of these formalisms allows for the creation of a reference model for eBPF. This approach facilitates the development of formal proofs for the rigorous analysis of eBPF instructions, ensuring that programs execute correctly and in strict accordance with the language's operational semantics.
+
+
+% Keep???? 
+%The primary contributions of this work are:
+%\begin{itemize}
+%    \item \textbf{Formal Operational Semantics:} A rigorous definition of the eBPF instruction set, capturing the behavior of arithmetic operations, memory access, and conditional branching.
+%    \item \textbf{Hoare Logic for eBPF:} The development of a sound axiomatic system for reasoning about program correctness and safety properties, specifically tailored to the eBPF execution model.
+%    \item \textbf{Mechanized Verification:} The implementation of this logic within a theorem prover, enabling the formal certification of eBPF programs against their functional specifications.
+%\end{itemize}
+
+
+
+%\begin{itemize}
+%    \item We formalize the textual eBPF specification, present in the Linux kernel repository,  using a definitional interpreter using the Lean 4 proof assistant. We validate our formalization against the  eBPF conformance tests~\cite{conformance} in order to ensure it's adequacy with respect to the eBPF expected behavior.
+%    \item We use the the defined semantics to apply property-based testing~\cite{Claessen00,paraskevopoulou2015foundational} in two example eBPF  programs. Using this approach we can validate programs without the need of loading them into the Linux kernel, which is the standard way of testing such applications.
+%\end{itemize}
+
+All source code reported in this article is available in the following repository on-line~\cite{repo}.
+%The rest of this paper is organized as follows. 
+%Section~\ref{sec:background} gives some background on eBPF and the Lean 4 proof assistant. 
+%Section~\ref{sec:semantics} presents some details our formalization and our strategy to validate it using the eBPF conformance test. Section~\ref{sec:casestudy} describe the use our formalization to test example eBPF programs using property-based testing. Related work is discussed in Section~\ref{sec:related} and Section~\ref{sec:conclusion} concludes. 
+
+\section{Background}\label{sec:background} % 1/2 Page
+
+\subsection{Hoare Logic}
+
+\[
+    \infer[skip]
+        { \{ P \} \; skip \; \{ P \} }
+        {}
+\]
+
+\[
+    \infer[assigment]
+        { \{ Q [a/x]  \} \; x:= a \; \{ Q\} }
+        {}
+\]
+
+\[
+    \infer[sequence]
+        { \{ P \} s;t \{ Q\} }
+        { \{ P \} s \{ R\}  \hspace{0.3cm} \{ R \} t \{ Q\}}
+\]
+
+\[
+    \infer[if]
+        { \{ P \} \text{ if } B \text{ then } S \text{ else } T \{ Q\} }
+        { \{ P \land B\} S \{ Q\} \hspace{0.3cm} \{ P \land \neg B \} T \{ Q\} }
+\]
+
+\[
+    \infer[while]
+        { \{ P \} \text{ while } B \text{ do } S \{ Q\} }
+        { \{ P \land B\} S \{ P \land \neg B \}}
+\]
+\[
+    \infer[consequence]
+        { \{ P' \} \; S \; \{ Q'\} }
+        {  P' \; \to \; P \hspace{0.3cm} \{ P\} \; S \; \{ Q \} \hspace{0.3cm} Q \; \to \;  Q'}
+\]
+
+\subsection{Separation Logic Assertions}
+
+Desciption of the basic of separation logic, and using exemples
+
+\paragraph{Points-to}
+
+\paragraph{Separation conjunction}
+
+\paragraph{Magic Wand}
+
+\paragraph{Entailment}
+
+\paragraph{Conjunction}
+
+
+\subsection{An Overview of eBPF}
+
+The Berkeley Packet Filter (BPF)~\cite{mccanne93} was initially introduced to support efficient and customizable packet filtering by allowing user-defined filter programs to be executed directly in the kernel. This design avoided the overhead of frequent context switches and memory copies required by traditional user-space filtering. The original design, later referred to as the classic BPF (cBPF), provided only two registers and a minimal instruction set, limiting its applicability in more complex networking or monitoring tasks~\cite{kernel2024bpfdoc}.
+
+Modern Linux kernels include the extended BPF (eBPF), a general-purpose virtual machine embedded in the kernel which expands BPF's capabilities~\cite{santos2019fast}. eBPF supports applications beyond packet filtering, including tracing, performance profiling, load balancing, intrusion detection, and policy enforcement~\cite{rice2023learning}. Prominent tools such as Docker, Katran~\cite{Katran}, and Kprobes rely on eBPF to interact with kernel internals in a safe and programmable manner.
+
+The eBPF virtual machine models a simple RISC-like architecture composed of 11 visible 64-bit registers: general-purpose registers R0--R9 and a frame pointer R10, which points to a fixed 512-byte stack memory region used for temporary storage~\cite{kernel2024bpfdoc}. Additionally, the kernel uses an internal AX auxiliary register for internal transformations such as constant blinding, aimed at mitigating JIT spraying attacks. The virtual machine also maintains an implicit program counter (PC) and a tail call counter (TCC), which allows the enforcement of bounded recursion through tail calls~\cite{nelson2020specification}.
+
+Programs written using eBPF are sequences of 64-bit instructions, each comprising: (1) an 8-bit opcode, (2) two 4-bit fields for source and destination registers, (3) a 16-bit signed offset, and (4) a 32-bit signed immediate value. There are more than 100 variants of opcode grouped into categories such as arithmetic/logic (ALU), conditional/unconditional jumps (JMP), memory operations (LD/ST), calls for helper function (CALL), and control flow (EXIT and TAIL\_CALL)~\cite{kernel2024bpfdoc}.
+
+Instead of writing ASM like programs, developers use a restricted subset of C which is compiled to bytecode via the LLVM of eBPF backend~\cite{santos2019fast}, though direct bytecode authoring is possible. Because user-submitted eBPF programs originate from untrusted sources, the Linux kernel employs a static verifier at load time~\cite{nelson2020specification}. This verifier checks critical safety properties, such as:
+\begin{itemize}
+    \item \textbf{Memory safety}: ensuring that programs access only allowed memory regions (stack, packet data, and context);
+    \item \textbf{Information flow security}: preventing leaks of internal kernel state through uninitialized memory or registers;
+    \item \textbf{Termination}: ensuring that all programs eventually halt by rejecting loops or requiring their boundedness.
+\end{itemize}
+
+Once verified, the program is either interpreted or compiled just-in-time (JIT) into native machine code, depending on architecture support. While the interpreter assumes verified safety and avoids runtime checks, the JIT enhances execution performance without compromising the system’s security guarantees~\cite{nelson2020specification,yuan2024endIot}.
+Interaction with the user space is possible by using key-value data structures, named maps. Such structures can be accessed concurrently by multiple eBPF programs and user processes. These maps enable shared state, persistent storage across events, and communication between kernel and user-level components~\cite{santos2019fast}.
+Programs can be attached to various predefined kernel hook points, such as network packet arrival, system call execution, or tracepoints. Each eBPF program declares its type upon loading, which determines the kinds of events it can observe and the structure of the associated context data~\cite{rice2023learning,kernel2024bpfdoc}. The calling convention specifies that R0 holds the return value, R1–R5 passes function arguments, and R6–R9 are callee-saved registers.
+
+
+\section{Formalizing eBPF Semantics}\label{sec:semantics}
+
+In this section, we present a template for the complete specification of the eBPF semantics. The eBPF instruction set is composed of 82 instructions, which can be divided into 44 ALU, logic and arithmetic, instructions, 13 memory instructions, and 25 control flow instructions. 
+%The current goal for the project is to prove some basic programs following the eBPF semantic, so the instructions that are defined in the project are the necessary operation for proving the small programs, but the remaining operators can be defined using the same structure, given that our specification uses at least one instruction of each class.
+The current objective of this project is to verify fundamental programs by adhering to eBPF semantics. Consequently, the instructions defined herein constitute the necessary operations for proving these core programs. However, the remaining instructions can be derived using the same structural framework, as our specification includes at least one representative instruction from each functional class.
+Since instructions of the same category have similar semantics, we present the evaluation rule for one element of each instruction category.% Note that this does not constitute a limitation of our formalization, since most of these variations are due to different addressing modes or word size, since eBPF has different instructions to operate on 32 or 64 bit words.
+
+\subsection{Notations used}
+
+Before presenting the operational semantic rules, we need some auxiliary definitions.
+We start by defining the state of the virtual machine of eBPF as a tuple 
+$\langle S,R,C,\mathrm{pc}\rangle$ where 
+\begin{itemize}
+    \item $S$: \textbf{Stack}, a finite mapping of 512 indices ($S[i]$) to integer values ($v$).
+    \item $R$: \textbf{Register Memory}, a finite mapping of register identifiers ($r$) to integer values ($v$).
+    \item $C$: \textbf{Code}, an immutable list of instructions to be executed.
+    \item $\mathrm{pc}$: is the \textbf{program counter}.
+\end{itemize}
+We let notation $R.[r \mapsto v]$ denote the operation of updating register $r$ with a value $v$ in memory $R$ and updating stack index $i$ by the value $v$ as $S.[i] := v$. 
+The notation $R.(r)$ represents getting the value of the register $r$ from $R$ and $S.[i]$ denotes the $i$th stack value. Finally, we let $v_1 \equiv v2$ denote an equality test for integer values.
+
+We define the stack as a record containing a function between the valid stack positions (the stack should have, at most, 512 values).
+\begin{verbatim}
+
+def StackState := Fin 512 → Option Nat
+
+\end{verbatim}
+
+The registers are represented by a record that has a field for holding values for each of the eleven eBPF registers.
+\begin{verbatim}
+inductive Reg where 
+    | r0 | r1 | r2 | r3 | r4 | r5 | r6 | r7 | r8 | r9 | r10
+deriving Repr, DecidableEq
+
+def RegsState := Reg → Nat
+\end{verbatim}
+
+The code component is represented by a list of operation codes, where each operation code is a constructor formed by the expected argument values.
+\begin{verbatim}
+
+inductive opCode where
+  | add_K (dst : Reg) (imm : Nat )
+  | add_X (dst src : Reg)
+  ...
+  | jne_K (dst : Reg) (imm : Nat ) (offset : Nat )
+  | jne_X (dst src : Reg) (offset : Nat )
+  ...
+  | exit
+
+abbrev Code := List opCode
+  
+\end{verbatim}
+The immediates and offsets are just numeric values; the source and destination registers are denoted by an enumeration of the registers names.
+
+\subsection{Definition of a semantics for eBPF}
+
+Following common practice, we define the instruction semantics as a transition system between eBPF virtual machine states. Since eBPF supports control flow instructions, our definitional interpreter relies on ``fuel''~\cite{McBride15} to convince Lean 4 totality checker that the interpreter terminates for any program by using an additional natural number argument, which is an upper bound on the number of recursive calls made by the semantics.
+
+The first instruction we consider is $\mathrm{Mov}$, which copies the content of one 
+register to another.
+
+\[
+    \infer
+        { \langle S, R, C, \mathrm{pc} \rangle \xrightarrow{} \langle S, R.[r_1 \mapsto v_2], C, \mathrm{pc} + 1 \rangle }
+        { C[\mathrm{pc}] = \mathrm{Mov} \, r_1 \, r_2 \quad v_2 = R.(r_2) }
+\]
+Next, we consider the semantics of an arbitrary arithmetic operation. We let $\bullet$ denote the integer function corresponding to the current instruction, which is represented by the generic opcode $\mathrm{OP}$. The rules specify the generic format of an arithmetic instruction: retrieves the values of the registers $r_1$, $r_2$, and uses them as arguments for the corresponding arithmetic operation.
+
+\[
+    \infer
+        { \langle S, R, C, \mathrm{pc} \rangle \xrightarrow{} \langle S, R.[r_1 \mapsto v_1 \bullet v_2], C, \mathrm{pc} + 1 \rangle }
+        { C[\mathrm{pc}] = \mathrm{OP} \, r_1 \, r_2 \quad v_1 = R.(r_1) \quad v_2 = R.(r_2) }
+\]
+The semantics for unconditional jumps simply updates the $\mathrm{pc}$ by the jump specified offset, as presented by the rule presented next.
+\[
+    \infer
+        { \langle S, R, C, \mathrm{pc} \rangle \xrightarrow{} \langle S, R, C, \mathrm{pc} + \mathrm{offset} \rangle }
+        { C[\mathrm{pc}] = \mathrm{JA} \, r_1 \, r_2 \, \mathrm{offset} }
+\]
+Conditional jumps have an immediate meaning: we retrieve the values from the registers and update $\mathrm{pc}$ by the offset when the values are equal or by one when such values are different.
+\[
+    \begin{array}{c}
+    \infer
+        { \langle S, R, C, \mathrm{pc} \rangle \xrightarrow{} \langle S, R, C, \mathrm{pc} + \mathrm{offset} \rangle }
+        { C[\mathrm{pc}] = \mathrm{JEQ}\:r_1 \, r_2 \, \mathrm{offset} \quad v_1 = R(r_1) \quad v_2 = R(r_2) \quad v_1 \equiv v_2 } \\ \\ 
+    \infer
+        { \langle S, R, C, \mathrm{pc} \rangle \xrightarrow{} \langle S, R, C, \mathrm{pc} + 1 \rangle }
+        { C[\mathrm{pc}] = \mathrm{JEQ}\:r_1 \, r_2 \, \mathrm{offset} \quad v_1 = R(r_1) \quad v_2 = R(r_2) \quad v_1 \not\equiv v_2 }
+    \end{array}
+\]
+
+Stack access instructions perform reads and writes on the 512 available stack positions, enabling both analysis of stored packet data and use of the stack as temporary auxiliary memory. These operations are essential for programs that handle data beyond the capacity of eBPF’s 10 native registers, such as code for packet manipulation. First we consider the instruction $\mathrm{LdxB}$ which loads a byte from the stack into a register.
+
+\[
+    \infer
+        { \langle S, R, C, \mathrm{pc} \rangle \xrightarrow{} \langle S, R[r_1 \mapsto S[\mathrm{idx}]], C, \mathrm{pc} + 1 \rangle }
+        { C[\mathrm{pc}] = \mathrm{LdxB} \, r_1 \, \mathrm{idx} }
+\]
+
+The task of storing a register value into a given stack position is done by instruction
+$\mathrm{LdxB}$, which simply updates the $idx$ position of
+the stack using the integer value stored at register $r_1$.
+\[
+    \infer
+    { \langle S, R, C, \mathrm{pc} \rangle \xrightarrow{} \langle S[\mathrm{idx}] := R(r_1), R, C, \mathrm{pc} + 1 \rangle }
+    { C[\mathrm{pc}] = \mathrm{St} \, r_1 \, \mathrm{idx} }
+\]
+
+Our implementation of the semantics consists of a set of functions to implement a definitional 
+interpreter for eBPF. The main semantics function is \verb|execMain|, which takes the VM configuration
+(type \verb|VMState|), that holds the memory, registers, program counter and the program instructions, 
+and produce, as result, a value of \verb|Option VMState|. The interpreter will just return the option
+\verb|.none| when the interpreter recursive calls exceeds the maximum step counter used in the 
+current program execution.
+
+\begin{verbatim}
+def exeMain (conf : VMState)(fuel : Nat) : Option VMState :=
+  match fuel with
+  | 0 => .none
+  | fuel' + 1 =>
+        let word := getInstruction conf.instr pc
+        match word with
+        | Word.mk _imm _offset _srcReg _destReg opCode =>
+          match opCode with
+          | OpCode.Eof => .some conf
+          | OpCode.mk _msb _source lsb =>
+            match lsb with
+            | Lsb.bpf_alu => ... -- some code omitted
+\end{verbatim}
+
+\subsection{Hoare Triples}
+where c is the code, pc is the program counter and c @ pc returns the instruction in the index pc os the code list 
+
+\paragraph{Consequence}
+\[
+    \infer[Consequence]
+        { \{ P' \} \, c \text{ @ } pc \, \{ Q'\} }
+        {P' \; \to \; P \hspace{0.3cm}
+        \{ P\} \; c \text{ @ } pc \; \{ Q \} \hspace{0.3cm} 
+        Q \; \to \; Q' }
+\]
+
+\paragraph{Frame}
+\[
+    \infer[Frame]
+        { \{ P * R \} \, c \text{ @ } pc \, \{ Q * R\} }
+        { \{ P \} \, c \text{ @ } pc \, \{ Q\} }
+\]
+\paragraph{Sequential Composition}
+\[
+    \infer[Seq]
+        { \{ P \} \, c \text{ @ } pc \, \{ Q\} }
+        { \{ P \} \, c \text{ @ } pc \, \{ R\}
+          \hspace{0.3cm}
+          \{ R \} \, c \text{ @ } pc \, \{ Q\} }
+\]
+
+\paragraph{Disjunction}
+\[
+    \infer[Disjunction]
+        { \{ P_1 \lor P_2\} \, c \text{ @ } pc \, \{ Q\} }
+        { \{ P_1 \} \, c \text{ @ } pc \, \{ Q\}
+          \hspace{0.3cm}
+          \{ P_2 \} \, c \text{ @ } pc \, \{ Q\} }
+\]
+\paragraph{Halt}
+\[
+    \infer[Halt]
+        { \{ Q \} \, c \text{ @ } pc \, \{ Q\} }
+        { c \text{ @ } pc = \bot }
+\]
+
+\subsection{Verification Condition Generator}
+
+Citar como foi feito, citar o WP, citar a estrutura geral das provas... 
+Fazer como o Mike Gordon
+
+
+\subsection{Validating the defined semantics} 
+
+
+
+\subsubsection{Proved Programs}\label{sec:casestudy} % 1,5 Page
+
+After validating our Lean implementation of the eBPF semantics against 
+the conformance tests, we decide to use it to verify two example programs
+present in the Linux kernel documentation~\cite{linuxbpfc}. 
+
+We follow a property based test approach: in both cases, we generate a number of random input values 
+and use them to check if the tested programs behave as expected. Our case study will 
+consider two example packet filters expressed in eBPF: one for ARP and another for IPV4 packets. 
+
+\paragraph{ARP package filter.} The first program will only accept ARP packets.
+\begin{verbatim}
+def prog_only_arp : Code :=
+  [ .ldxh_X .r1 12
+  , .mov_K .r0 1
+  , .jne_K .r1 0x806 1
+  , .exit
+  , .mov_K .r0 0
+  , .exit
+  ]
+
+\end{verbatim}
+The previous code piece uses our macros to define the program using syntax 
+closer to the syntax used by the conformance test suite.
+In order to test this program, we built a simple random package generator 
+which is parameterized by the number of correct and incorrect ARP packages to be 
+produced. Using our generator, we are able to test this program and our semantics 
+gives the right answer for each generated test input.
+
+\paragraph{IPV4 package filter} Our next example is a program which selects only
+IPV4 packages.
+
+\begin{verbatim}
+  [ .ldxh_X .r1 12
+  , .mov_K .r0 1
+  , .jne_K .r1 0x8 1
+  , .exit
+  , .mov_K .r0 0
+  , .exit
+  ]
+\end{verbatim}
+Again, we follow the same strategy as for the ARP package filter. We built a 
+package generator and use it to build inputs for the execution of the previous 
+program using our semantics, which behaves correctly.
+
+For each implemented program, 99,000 packets were generated — half of them expected to be accepted and the other half expected to be rejected. For both programs, all generated packets produced the correct output.
+
+\paragraph{Adicionar as provas dos programas}
+
+Mudar Fim\\ 
+Mudar\\
+Mudar\\
+Mudar\\
+
+
+\section{Related Works}\label{sec:related}
+
+\paragraph{Decoding Lua: Formal Semantics for the Developer and the Semanticist}\cite{soldevila2017decoding} This article presents a formalization of the semantics of a subset of Lua, motivated by its rising use in high-performance and embedded systems, but lacking a formal specification and validation tools.
+
+The formalization by \cite{soldevila2017decoding} is relevant for this work because it tackles a similar problem: the absence of an executable formal specification for a widely used, informally defined language. However, their focus is limited to a language subset and does not address kernel-level execution contexts, which are more demanding in terms of safety and correctness. Moreover, their integration with verification tools remains less comprehensive than what is needed in environments requiring high assurance.
+
+Unlike Lua, which targets higher-level application logic, our work centers on kernel-level safety and low-level semantics, where faults can have severe system-wide effects. Both works apply formal methods to support automated verification tools and the development of semantically sound extensions.
+
+In \cite{soldevila2017decoding}, the formalization was validated via a test suite derived from the Lua reference interpreter. This approach's limitation is its dependency on the coverage of the Lua test suite, potentially missing critical edge cases. Similarly, our project validates the formal eBPF specification against tests representing expected behaviors from the eBPF verifier implementation \cite{ubpf}, providing concrete evidence of semantic fidelity.
+
+\paragraph{KEVM: A Complete Formal Semantics of the Ethereum Virtual Machine}\cite{hildenbrandt2018kevm} This work delivers an executable formal specification of the Ethereum Virtual Machine (EVM) using the \textit{K Framework}, motivated by the need to verify smart contracts after several costly security failures.
+
+By enabling automated verification of security properties, KEVM also supports static analysis, test generation, and implementation validation. Nonetheless, KEVM assumes a stack-based, high-level execution model with contract isolation, differing markedly from eBPF's low-level kernel environment. eBPF operates under stricter security requirements, as errors in kernel space can compromise system integrity.
+
+While KEVM focuses on financial correctness in decentralized applications, our work addresses system-level guarantees in a general-purpose OS kernel, where verification failures have operational, not monetary, consequences. Thus, the absence of a clear formal specification for eBPF limits secure extension development and ecosystem evolution. Our partial executable specification lays a foundation for verifying security properties and enabling tool support, inspired by the principles applied in KEVM.
+
+\paragraph{Foundational Property-Based Testing}\cite{paraskevopoulou2015foundational} This article presents QuickChick, a property-based testing tool integrated with Coq, facilitating the automatic generation of counterexamples to validate formal specifications. It effectively detects inconsistencies but is limited to the Coq ecosystem and cannot guarantee semantic completeness.
+
+Following this, the SlimCheck library \cite{slimcheck2023} for Lean offers property-based testing support integrated with its proof environment. Originally, this project planned to use SlimCheck for automatic property validation. However, since SlimCheck was not yet ported to Lean 4, the version used here, we resorted to manual test case creation and invariant checks within Lean. This alternative preserves systematic validation while awaiting mature tooling compatible with Lean 4.
+
+\paragraph{Specification and verification in the field: Applying formal methods to BPF just-in-time compilers in the Linux kernel} \cite{nelson2020specification} develops a formal specification of the BPF JIT compiler's behavior in Linux and verifies semantic preservation through formal tools.
+
+This work’s scope is narrower, focusing on the JIT execution path. Our project concentrates on the eBPF interpreter's semantics, foundational for all execution modes—JIT or interpreted—thus supporting broader reuse and extensibility. Both aim to provide semantic rigor, with this article serving as a key comparison, especially regarding semantic preservation across execution strategies.
+
+\paragraph{End-to-End Mechanized Proof of an eBPF Virtual Machine for Micro-controllers} \cite{yuan2022endMicro} constructs a formally verified eBPF virtual machine using Coq, proving properties like memory safety and execution correctness for embedded microcontroller contexts.
+
+Its abstraction omits many Linux kernel complexities, focusing on simplified runtime models for embedded systems. Our work, in contrast, develops an executable eBPF specification aligned with Linux kernel verifier behavior, aiming at a more realistic and comprehensive execution environment. This prior work offers an important benchmark for our specification's structure and validation.
+
+\paragraph{End-to-End Mechanized Proof of a JIT-accelerated eBPF Virtual Machine for IoT} \cite{yuan2024endIot} presents a formally verified JIT-accelerated eBPF VM for IoT devices, proving correctness across the entire pipeline.
+
+However, it does not address Linux kernel verifier behavior nor provide a semantic baseline for multiple verification strategies. By focusing on the semantics as executed by the Linux kernel verifier, our approach complements this work, serving as a foundation for both interpreter validation and future JIT or compiler verification.
+
+\paragraph{Bringing the WebAssembly Standard up to Speed with SpecTec} \cite{youn2024bringing} introduces a domain-specific language (DSL) and a tool that automates the specification of WebAssembly and the formalization of new features. From a SpecTec description, it generates typeset documents with formal definitions and pseudocode, along with a meta-level interpreter for executing the semantics.
+
+This work serves as a reference for our approach, which also defines an executable formal specification and toolchain to validate, extend, and analyze eBPF programs. To support this, we developed an interpreter capable of executing real eBPF code, enabling practical testing of the semantics.
+
+In contrast to WebAssembly’s well-defined formal semantics, eBPF lacks a formal specification, relying instead on textual documentation and kernel source code. It also integrates tightly with the Linux kernel, requiring alignment with verifier behavior and system-level semantics. Our work addresses these challenges to bridge the gap between informal definitions and formal executable semantics.
+
+\section{Conclusion}\label{sec:conclusion} % ,5 Page
+
+In this work, we present our efforts in producing an executable formal 
+semantics for eBPF using Lean 4 theorem prover. The semantics is realized
+using a fuel-based definitional interpreter to satisfy restrictions
+imposed by the Lean totality checker. We validate our semantics using a 
+conformance test suite created by eBPF community to validate the behaviour 
+of new implementations. Currently, from the 222 test cases present in the 
+conformance test suite, our semantics does not handle 20 which uses a 
+lock instruction, which is not part of the original eBPF specification.
+
+As future work, we intend to use our semantics to define a separation logic
+for the verification of eBPF programs and construct a verification 
+condition generator tool based on the developed program logic using the 
+Lean 4 proof assistant.
+
+%% The next two lines define the bibliography style to be used, and
+%% the bibliography file.
+\bibliographystyle{ACM-Reference-Format}
+\bibliography{sample-base}
+
+%% If your work has appendices, this is the place to put them
+\end{document}
+
+% ============================================================
+% CBSoft ACM-like Template – Author Checklist
+% ============================================================
+%
+% 1. Remove CCS Concepts
+%    - Remove the CCSXML block and \ccsdesc commands.
+%
+% 2. Remove ACM footer
+%    Use the command \renewcommand\footnotetextcopyrightpermission[1]{}
+%
+% 3. Remove ACM Reference Format
+%    Use the commands \setcopyright{none} and 
+%    \settopmatter{printacmref=false}
+%
+% 4. Short title must not exceed column width
+%    Use the command 
+%    \renewcommand{\shorttitle}{The Name of the Title Is Hope}
+%
+% 5. Include authors' surnames in the page headers (even pages)
+%    - The author names in the page header (at the top of the page)
+%      must not exceed the column width
+%    - This list must contain only the authors' surnames
+%    - Suggestion: use "Surname et al." for more than two authors with the
+%      command \renewcommand{\shortauthors}{Surname1stAuthor et al.}
+%
+% 6. Author format below title:
+%    \author{FirstName Surname}
+%    \affiliation{
+%      \institution{Department, Institution}
+%      \city{City}
+%      \country{Country}}
+%    \email{email@email.com}
+%
+% 7. Verify all author emails are included
+%    - Check font consistency
+%
+% 8. All numbered section and subsection titles must follow the same
+%    capitalization style: the first letter of each word in the title 
+%    must be capitalized (Title Case).
+%
+% 9. Artifact Availability (check CFP)
+%    - Not numbered -- use \section*{Artifact Availability}
+%    - Placed after Conclusion and before Acknowledgments
+%    - In Portuguese, use \section*{Disponibilidade de Artefatos}
+%
+% 10. Abstract
+%     - Single paragraph
+%     - Papers written in Portuguese must use "Resumo" instead of "Abstract"
+%       with the command \renewcommand\abstractname{Resumo}
+%
+% 11. Keywords
+%     - Comma-separated, first letter capitalized
+%     - Papers written in Portuguese must use "Palavras-chave" instead of
+%       "Keywords" with the command 
+%       \renewcommand\keywordsname{Palavras-chave}
+%
+% 12. References
+%     - Not numbered -- already enforced by the template
+%     - Papers written in Portuguese must use "Referências" instead of
+%       "References" with the command \renewcommand\refname{Referências}
+%
+% 13. Acknowledgements
+%     - Optional section
+%     - Not numbered -- use \section*{Acknowledgements}
+%     - In Portuguese, use \section*{Agradecimentos}
+%
+% 14. Remove received/revised/accepted dates
+%
+% 15. Figure captions must appear below figures
+%
+% 16. Verify the symposium name in the page header
+%    - Use English, even if the paper is written in Portuguese
+%    - Select the correct event according to the track
+%    - Use Arabic ordinal numbers, not Roman
+%
+%    SBES (Research, Education, IIER, Tools, Industry)
+%    \acmConference[SBES 2026]{40th Brazilian Symposium on Software Engineering}{September 8--12, 2026}{São Paulo, SP, Brazil}
+%
+%    SBLP
+%    \acmConference[SBLP 2026]{30th Brazilian Symposium on Programming Languages}{September 8--12, 2026}{São Paulo, SP, Brazil}
+%
+%    SBCARS
+%    \acmConference[SBCARS 2026]{20th Brazilian Symposium on Software Components, Architectures, and Reuse}{September 8--12, 2026}{São Paulo, SP, Brazil}
+%
+%    SAST
+%    \acmConference[SAST 2026]{11st Brazilian Symposium on Systematic and Automated Software Testing}{September 8--12, 2026}{São Paulo, SP, Brazil}
+%
+%    Workshops
+%    \acmConference[Workshop Acronym 2026]{Workshop Full Name}{Workshop Date}{São Paulo, SP, Brazil}
+%
+%
+% 17. Remove colored author names, citations, and links
+%
+% 18. Camera-ready only:
+%     Do not use the "review" or "anonymous" modes in the 
+%     \documentclass command
+%
+% 19. SBES Tools Track papers must include a demo video link at the end of
+%     the abstract
+%     Example:
+%     \begin{abstract}
+%     <abstract text> \newline
+%     \textbf{Demo video:} <video link>
+%     \end{abstract}
+%
+% 20. SBES Industry Track papers must not include author biographies
+%
+% ============================================================
+
+\endinput
+
+
