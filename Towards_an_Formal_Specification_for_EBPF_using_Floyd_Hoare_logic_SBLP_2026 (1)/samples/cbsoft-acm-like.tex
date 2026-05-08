@@ -165,57 +165,92 @@ All source code reported in this article is available in the following repositor
 
 \section{Background}\label{sec:background} % 1/2 Page
 
-\subsection{Hoare Logic}
+\subsection{Floyd-Hoare Logic}
 
+The foundation of formal program verification lies in Hoare logic, a system developed by C.A.R. Hoare in 1969 \cite{hoare1969axiomatic}, building upon the earlier work of Floyd \cite{floyd1967assigning} on flow diagrams. This logical framework, often referred to as Floyd-Hoare logic, provides a set of axioms and inference rules for reasoning about the correctness of computer programs with mathematical rigor.
+
+The central construct in this logic is the Hoare triple, denoted as:
 \[
-    \infer[skip]
-        { \{ P \} \; skip \; \{ P \} }
-        {}
+\{P\} C \{Q\}
 \]
 
+In this notation, $C$ represents a program or command, while $P$ and $Q$ are assertions (logic formulae) describing the state of the system—characterizing a set of conditions that are satisfied by a particular state. $P$ is the \textit{precondition} and $Q$ is the \textit{postcondition}, representing the properties that must hold true before the execution of the command and the new set of conditions expected to hold after its completion. Following the definition provided by Gordon \cite{gordon2014hoare}, the triple asserts that if the program $C$ is executed in an initial state that satisfies $P$, and if $C$ terminates, then the final state is guaranteed to satisfy $Q$. This interpretation is known as \textit{partial correctness}.
+
+\paragraph{Axioms and Inference Rules}
+The power of Hoare logic lies in its compositional nature, allowing the correctness of a complex program to be derived from the correctness of its constituent parts. The primary rules, as formalized in \cite{gordon2014hoare}, include:
+
+\begin{itemize}
+    \item \textbf{The Assignment Axiom:}
+    This axiom is the cornerstone of the logic, defining how the state changes when a value is assigned to a variable $V$. It states that:
+    \[
+    \vdash \{Q[E/V]\} V := E \{Q\}
+    \]
+    where $Q[E/V]$ denotes the assertion obtained by substituting every free occurrence of $V$ in $Q$ with the expression $E$.
+
+    \item \textbf{The Rule of Consequence:}
+    This rule allows the use of standard logical reasoning within the Hoare framework. It enables the strengthening of pre-conditions and the weakening of post-conditions:
+    \[
+    \frac{P \Rightarrow P' \quad \{P'\} C \{Q'\} \quad Q' \Rightarrow Q}{\{P\} C \{Q\}}
+    \]
+
+    \item \textbf{The Sequencing Rule:}
+    To reason about a sequence of two commands, $C_1$ and $C_2$, an intermediate assertion $R$ must exist that serves as the post-condition for $C_1$ and the pre-condition for $C_2$:
+    \[
+    \frac{\{P\} C_1 \{R\} \quad \{R\} C_2 \{Q\}}{\{P\} C_1; C_2 \{Q\}}
+    \]
+
+    \item \textbf{The While Rule:}
+    For iterative structures, the logic introduces the concept of an \textit{invariant} ($R$). An invariant is an assertion that remains true before and after each iteration of the loop body:
+    \[
+    \frac{\{R \land S\} C \{R\}}{\{R\} \text{ WHILE } S \text{ DO } C \{R \land \neg S\}}
+    \]
+\end{itemize}
+
+\paragraph{Verification Conditions}
+As Gordon highlights \cite{gordon2014hoare}, a significant advantage of Hoare logic is that it can be used to generate \textit{Verification Conditions} (VCs). By applying the rules backwards from the post-condition, one can automatically produce a set of pure logical formulae. If these formulae can be proved using standard mathematical logic, the original Hoare triple is guaranteed to be valid, providing a clear path for mechanized program verification.
+
+
+\subsection{Separation Logic}
+
+Although classical Hoare logic is effective for reasoning about programs with static variables, it faces significant challenges when dealing with pointers and shared mutable data structures. As noted by Gordon \cite{gordon2014hoare}, the primary difficulty arises from \textit{aliasing}—where different names or pointers refer to the same memory location—which can cause an assignment to have unexpected side effects. To address this, Separation Logic was developed by Reynolds \cite{reynolds2002separation} and O'Hearn \cite{ohearn2001local} as an extension of Hoare logic that facilitates local reasoning about the heap.
+
+The central innovation of Separation Logic is the \textit{separating conjunction} ($\ast$). An assertion $P \ast Q$ asserts that the total heap can be partitioned into two disjoint portions, where $P$ holds in one and $Q$ holds in the other. This ensures that the resources described by $P$ and $Q$ do not overlap.
+
+\paragraph{Core Assertions}
+Separation Logic introduces several spatial assertions to describe the state of the heap:
+\begin{itemize}
+    \item \textbf{Empty Heap ($emp$):} Asserts that the heap is empty (contains no allocated cells).
+    \item \textbf{Points-to ($E \mapsto F$):} Asserts that the heap contains exactly one cell at address $E$ with contents $F$.
+    \item \textbf{Separating Conjunction ($P \ast Q$):} Asserts that the heap can be split into two disjoint parts $h_1$ and $h_2$ such that $P$ holds for $h_1$ and $Q$ holds for $h_2$.
+\end{itemize}
+
+\paragraph{The Frame Rule}
+The most significant inference rule in Separation Logic is the \textit{Frame Rule}. It allows one to extend a local proof about a command to a larger context, provided the command does not modify the variables or memory locations in that context. The rule is defined as:
 \[
-    \infer[assigment]
-        { \{ Q [a/x]  \} \; x:= a \; \{ Q\} }
-        {}
+\frac{\{P\} C \{Q\}}{\{P \ast R\} C \{Q \ast R\}}
 \]
+where $modifies(C) \cap vars(R) = \emptyset$. This rule is the key to \textit{local reasoning}: a specification only needs to describe the "footprint" (the memory actually accessed) of a command. Anything outside that footprint (the "frame" $R$) remains unchanged.
 
+\paragraph{Axioms for Heap Operations}
+In Separation Logic, basic memory operations are given tight specifications:
+\begin{itemize}
+    \item \textbf{Allocation:} $\{emp\} \ v := \text{cons}(E) \ \{v \mapsto E\}$
+    \item \textbf{Deallocation:} $\{E \mapsto -\} \ \text{dispose}(E) \ \{emp\}$
+    \item \textbf{Lookup:} $\{E \mapsto v\} \ x := [E] \ \{E \mapsto v \land x=v\}$
+    \item \textbf{Mutation:} $\{E \mapsto -\} \ [E] := F \ \{E \mapsto F\}$
+\end{itemize}
+
+\paragraph{Example: Local Reasoning and Aliasing}
+Consider a command that updates a memory location $C = [x] := 5$. In classical Hoare logic, to prove that $[y]$ remains unchanged, one would need an explicit non-aliasing condition like $x \neq y$. In Separation Logic, the spatial separation is built into the state description:
+\begin{example}
+Given the initial state $\{x \mapsto 3 \ast y \mapsto 3\}$, the update to $x$ can be proven using the Frame Rule where $R$ is $\{y \mapsto 3\}$:
 \[
-    \infer[sequence]
-        { \{ P \} s;t \{ Q\} }
-        { \{ P \} s \{ R\}  \hspace{0.3cm} \{ R \} t \{ Q\}}
+\frac{\{x \mapsto 3\} \ [x] := 5 \ \{x \mapsto 5\}}{\{x \mapsto 3 \ast y \mapsto 3\} \ [x] := 5 \ \{x \mapsto 5 \ast y \mapsto 3\}}
 \]
+Because the state is defined using $\ast$, we know $x$ and $y$ are distinct addresses, and the update to $x$ cannot affect the contents of $y$.
+\end{example}
 
-\[
-    \infer[if]
-        { \{ P \} \text{ if } B \text{ then } S \text{ else } T \{ Q\} }
-        { \{ P \land B\} S \{ Q\} \hspace{0.3cm} \{ P \land \neg B \} T \{ Q\} }
-\]
-
-\[
-    \infer[while]
-        { \{ P \} \text{ while } B \text{ do } S \{ Q\} }
-        { \{ P \land B\} S \{ P \land \neg B \}}
-\]
-\[
-    \infer[consequence]
-        { \{ P' \} \; S \; \{ Q'\} }
-        {  P' \; \to \; P \hspace{0.3cm} \{ P\} \; S \; \{ Q \} \hspace{0.3cm} Q \; \to \;  Q'}
-\]
-
-\subsection{Separation Logic Assertions}
-
-Desciption of the basic of separation logic, and using exemples
-
-\paragraph{Points-to}
-
-\paragraph{Separation conjunction}
-
-\paragraph{Magic Wand}
-
-\paragraph{Entailment}
-
-\paragraph{Conjunction}
-
+As highlighted by Gordon \cite{gordon2014hoare}, this approach significantly simplifies the verification of programs that manipulate complex linked data structures, as it eliminates the need for global non-aliasing predicates that often lead to exponential complexity in proofs.
 
 \subsection{An Overview of eBPF}
 
@@ -413,9 +448,47 @@ where c is the code, pc is the program counter and c @ pc returns the instructio
 
 \subsection{Verification Condition Generator}
 
-Citar como foi feito, citar o WP, citar a estrutura geral das provas... 
-Fazer como o Mike Gordon
+To automate the proof of a Hoare triple $\{P\} C \{Q\}$, we define a \textit{Verification Condition Generator} (VCG). The goal is to produce a set of logical formulae (the verification conditions) which, if valid, ensure that the program $C$ satisfies the specification given by $P$ and $Q$.
 
+Following the approach of calculating weakest preconditions ($wp$), we define the function $VC(i, Q)$ for an eBPF instruction $i$ and a post-condition $Q$. For a single instruction, the verification condition for $\{P\} i \{Q\}$ is simply the verification of the implication $P \Rightarrow wp(i, Q)$.
+
+\paragraph{Definition of the VCG for eBPF instructions}
+Based on the operational semantics of the eBPF virtual machine, the verification conditions for the primary instruction classes are defined as follows:
+
+\begin{itemize}
+    \item \textbf{Assignment and Arithmetic:}
+    \begin{itemize}
+        \item $VC(\texttt{mov\_K } dst \text{ imm}, Q) = Q[imm/dst]$
+        \item $VC(\texttt{add\_K } dst \text{ imm}, Q) = Q[dst + imm/dst]$
+        \item $VC(\texttt{and\_X } dst \text{ src}, Q) = Q[dst \ \& \ src/dst]$
+    \end{itemize}
+    
+    \item \textbf{Memory Access (Load):}
+    \begin{itemize}
+        \item $VC(\texttt{ldh\_X } dst \text{ src index}, Q) = \exists v. (\text{mem}[index + src] = \text{some } v) \land Q[v/dst]$
+    \end{itemize}
+
+    \item \textbf{Control Flow (Conditional Jumps):}
+    For a jump instruction with a condition $B$, such as \texttt{jeq\_K}, the condition must account for both the branch taken and the fall-through case:
+    \begin{itemize}
+        \item $VC(\texttt{jeq\_K } dst \text{ imm offset}, Q) = (dst = imm \Rightarrow Q_{target}) \land (dst \neq imm \Rightarrow Q_{next})$
+    \end{itemize}
+\end{itemize}
+
+Where $Q[e/r]$ denotes the assertion $Q$ in which all occurrences of register $r$ are replaced by the expression $e$.
+
+\paragraph{Verification Condition Theorem}
+The fundamental property of the VCG is that it provides a sufficient condition for correctness. For any eBPF command $C$:
+\[
+\text{If } \vdash VC(C, Q) \text{ is valid, then } \vdash \{VC(C, Q)\} C \{Q\}
+\]
+To prove a specific triple $\{P\} C \{Q\}$, it suffices to show that $P \Rightarrow VC(C, Q)$. In our implementation, this process is mechanized by calculating the weakest precondition through the state transition function $s[dst \mapsto val]$, as defined in the formal semantics.
+
+\paragraph{Example: Memory Loading}
+When verifying a load instruction \texttt{ldh\_X}, the VCG generates a condition that requires the existence of a valid memory value at the calculated address. This ensures that memory safety is preserved, a core requirement of the eBPF verifier:
+\[
+\{ \exists v. (\text{mem}[index + src] = \text{some } v) \land Q[v/dst] \} \ \texttt{ldh\_X } dst \text{ src index} \ \{ Q \}
+\]
 
 \subsection{Validating the defined semantics} 
 
