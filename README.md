@@ -1,3 +1,22 @@
+# Completude do Artigo
+Introdução - OK
+BackGround -
+  HoareLogic - OK 
+  Separation Logic - OK
+  Overview of eBPF - OK
+Formalizing eBPF - Intro OK
+  Notations Used - OK
+  Formal Operational Semantics - OK
+  Hoare Logic Rules for eBPF - OK +/-
+  Weakest Preconditions - OK +/-
+  Verification Condition Generator - +/-
+  Verification Condition Generator Soundness -
+  Validating the defined semantics -
+  Verification of eBPF Programs: Case Studies -
+Related Works - Add Hoare Related Works
+Conclusion -
+
+
 # Documentação Técnica: Formalização e Verificação do eBPF em Lean 4
 
 ## 1. Introdução e Visão Geral
