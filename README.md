@@ -1,18 +1,21 @@
 # Completude do Artigo
 Introdução - OK
-BackGround -
+
+BackGround - OK
   HoareLogic - OK 
   Separation Logic - OK
   Overview of eBPF - OK
+  
 Formalizing eBPF - Intro OK
   Notations Used - OK
   Formal Operational Semantics - OK
   Hoare Logic Rules for eBPF - OK +/-
   Weakest Preconditions - OK +/-
   Verification Condition Generator - +/-
-  Verification Condition Generator Soundness -
-  Validating the defined semantics -
-  Verification of eBPF Programs: Case Studies -
+  Verification Condition Generator Soundness - To do
+  Validating the defined semantics - To do
+  Verification of eBPF Programs: Case Studies - To do
+
 Related Works - Add Hoare Related Works
 Conclusion -
 
